@@ -2,7 +2,7 @@ package com.example.dreambond.navigation
 
 
 sealed class Screen(val route: String) {
-    data object Name : Screen("home")
+    data object Home : Screen("home")
     data object CharacterSelect :
         Screen("character_select")
 
