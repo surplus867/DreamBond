@@ -8,11 +8,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dreambond.GameViewModel
+import com.example.dreambond.data.local.DreamBondDatabase
 import com.example.dreambond.navigation.Screen
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    database: DreamBondDatabase,
     gameViewModel: GameViewModel = viewModel()
 ) {
     val uiState by gameViewModel.uiState.collectAsState()
@@ -63,14 +65,14 @@ fun AppNavGraph(
                 onNextDay = {
                     gameViewModel.nextDay()
                     navController.navigate(Screen.Chat.route) {
-                        popUpTo(Screen.Chat.route) { inclusive = true }
+                        popUpTo(Screen.EndDay.route) { inclusive = true }
 
                     }
                 },
                 onBackToHome = {
                     gameViewModel.resetGame()
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(0)
+                        popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 }
             )
