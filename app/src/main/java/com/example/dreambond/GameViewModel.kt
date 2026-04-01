@@ -141,33 +141,33 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         return when {
             affection < 10 -> {
                 when (option.text) {
-                    "I wanted to see you." -> "You... wanted to see me?"
-                    "I could not sleep." -> "I see... it's quiet tonight."
-                    else -> "Hmm... you're interesting."
+                    "I wanted to see you." -> "You wanted to see me... ? I didn't expect that."
+                    "I could not sleep." -> "Then maybe the night brought you here for a reason."
+                    else -> "You're a little hard to read... but I don't mind."
                 }
             }
 
             affection < 25 -> {
                 when (option.text) {
-                    "I wanted to see you." -> "I'm glad you came back."
-                    "I could not sleep." -> "Then let's spend time together."
-                    else -> "You're a bit mysterious."
+                    "I wanted to see you." -> "I'm glad you came back tonight."
+                    "I could not sleep." -> "Then stay with me for a while. It's peaceful here."
+                    else -> "You always say things that make me curious."
                 }
             }
 
             affection < 50 -> {
                 when (option.text) {
                     "I wanted to see you." -> "I was hoping you'd say that."
-                    "I could not sleep." -> "Stay with me a little longer."
-                    else -> "You're kind of cute, you know."
+                    "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
+                    else -> "You know... you're kind of cute when you act mysterious."
                 }
             }
 
             else -> {
                 when (option.text) {
-                    "I wanted to see you." -> "I missed you..."
-                    "I could not sleep." -> "Then don't leave tonight."
-                    else -> "You always come back to me."
+                    "I wanted to see you." -> "I missed you... I was waiting for you again."
+                    "I could not sleep." -> "Then stay. Nights feel softer when you're here."
+                    else -> "Even when you pretend otherwise, you always come back to me."
                 }
             }
         }

@@ -2,6 +2,7 @@ package com.example.dreambond.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,11 +11,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,54 +40,141 @@ fun ChatScreen(
     onChooseReply: (DialogueOption) -> Unit,
     onEndDay: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    val statusColor = when (relationshipLevel) {
+        "Stranger" -> Color.Gray
+        "Friend" -> Color(0xFF4CAF50)
+        "Close" -> Color(0xFF2196F3)
+        else -> Color(0xFFE91E63)
+    }
+
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF0B1020),
+            Color(0xFF141B34),
+            Color(0xFF1C2340)
+        )
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent
     ) {
-        Text(
-            text = character?.name ?: "Unknown",
-            style = MaterialTheme.typography.headlineSmall
-        )
 
-        Text(
-            text = "Affection: $affection",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Text(
-            text = "Status: $relationshipLevel",
-            style = MaterialTheme.typography.bodyMedium,
-            color = when (relationshipLevel) {
-                "Stranger" -> Color.Gray
-                "Friend" -> Color(0xFF00FF00)
-                "Close" -> Color(0xFF0000FF)
-                else -> Color(0xFFFF00FF)
-            }
-        )
-
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = currentMessage,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(16.dp)
+                text = character?.name ?: "Mina",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White
             )
 
-            if (latestResponse.isNotBlank()) {
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "A quiet night with her",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFFB8C1EC)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF202845)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Affection: $affection ❤️",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White
+                        )
+
+                        Text(
+                            text = relationshipLevel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = statusColor
+                        )
+                    }
+
+                    HorizontalDivider(color = Color(0xFF3A4267))
+
                     Text(
-                        text = latestResponse,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp)
+                        text = getMoodText(relationshipLevel),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFB8C1EC)
                     )
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(
+                    topStart = 20.dp,
+                    topEnd = 20.dp,
+                    bottomStart = 8.dp,
+                    bottomEnd = 20.dp
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF2A3358)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = character?.name ?: "Mina",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFFFFD6E7)
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = currentMessage,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White
+                    )
+                }
+            }
+
+            if (latestResponse.isNotBlank() && sessionEnded) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(
+                        topStart = 20.dp,
+                        topEnd = 20.dp,
+                        bottomStart = 20.dp,
+                        bottomEnd = 8.dp
+                    ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF3A4267)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Her tone tonight",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFFB8C1EC)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = latestResponse,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 
@@ -91,20 +184,47 @@ fun ChatScreen(
                 options.forEach { option ->
                     Button(
                         onClick = { onChooseReply(option) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF5561A8),
+                            contentColor = Color.White
+                        )
                     ) {
-                        Text(option.text)
+                        Text(
+                            text = option.text,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
                     }
                 }
             } else {
                 Button(
                     onClick = onEndDay,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE91E63),
+                        contentColor = Color.White
+                    )
                 ) {
-                    Text("End Day")
+                    Text(
+                        text = "End Day 🌙",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
             }
         }
+    }
+}
+
+private fun getMoodText(relationshipLevel: String): String {
+    return when (relationshipLevel) {
+        "Stranger" -> "She is still getting used to your presence."
+        "Friend" -> "She feels more comfortable around you now."
+        "Close" -> "There is warmth and familiarity between you."
+        else -> "She seems deeply attached to you tonight."
     }
 }
 
