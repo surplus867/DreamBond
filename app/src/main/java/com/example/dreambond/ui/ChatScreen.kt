@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.dreambond.model.DialogueOption
@@ -25,6 +26,7 @@ import com.example.dreambond.ui.theme.DreamBondTheme
 fun ChatScreen(
     character: GirlfriendCharacter?,
     affection: Int,
+    relationshipLevel: String,
     currentMessage: String,
     latestResponse: String,
     sessionEnded: Boolean,
@@ -47,6 +49,17 @@ fun ChatScreen(
         Text(
             text = "Affection: $affection",
             style = MaterialTheme.typography.bodyLarge
+        )
+
+        Text(
+            text = "Status: $relationshipLevel",
+            style = MaterialTheme.typography.bodyMedium,
+            color = when (relationshipLevel) {
+                "Stranger" -> Color.Gray
+                "Friend" -> Color(0xFF00FF00)
+                "Close" -> Color(0xFF0000FF)
+                else -> Color(0xFFFF00FF)
+            }
         )
 
         Card(
@@ -109,6 +122,7 @@ private fun ChatScreenEndPreview() {
         ChatScreen(
             character = sampleCharacter,
             affection = 10,
+            relationshipLevel = "Close",
             currentMessage = "Today was really special.",
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,

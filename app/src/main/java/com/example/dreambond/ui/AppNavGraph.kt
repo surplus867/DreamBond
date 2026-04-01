@@ -8,15 +8,19 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dreambond.GameViewModel
+import com.example.dreambond.GameViewModelFactory
+import com.example.dreambond.data.GameRepository
 import com.example.dreambond.data.local.DreamBondDatabase
 import com.example.dreambond.navigation.Screen
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    database: DreamBondDatabase,
-    gameViewModel: GameViewModel = viewModel()
+    database: DreamBondDatabase
 ) {
+    val repository = GameRepository(database.gameProgressDao())
+    val factory = GameViewModelFactory(repository)
+    val gameViewModel: GameViewModel = viewModel(factory = factory)
     val uiState by gameViewModel.uiState.collectAsState()
 
     NavHost(
@@ -45,6 +49,7 @@ fun AppNavGraph(
             ChatScreen(
                 character = uiState.selectedCharacter,
                 affection = uiState.affection,
+                relationshipLevel = gameViewModel.getRelationShipLevel(),
                 currentMessage = uiState.currentMessage,
                 latestResponse = uiState.latestResponse,
                 sessionEnded = uiState.sessionEnded,
@@ -53,6 +58,7 @@ fun AppNavGraph(
                     gameViewModel.chooseReply(option)
                 },
                 onEndDay = {
+                    gameViewModel.saveProgress()
                     navController.navigate(Screen.EndDay.route)
                 }
             )
@@ -63,6 +69,7 @@ fun AppNavGraph(
                 day = uiState.day,
                 affection = uiState.affection,
                 onNextDay = {
+                    gameViewModel.saveProgress()
                     gameViewModel.nextDay()
                     navController.navigate(Screen.Chat.route) {
                         popUpTo(Screen.EndDay.route) { inclusive = true }

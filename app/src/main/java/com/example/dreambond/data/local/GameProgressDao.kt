@@ -8,9 +8,12 @@ import androidx.room.Query
 @Dao
 interface GameProgressDao {
 
-    @Query("SELECT * FROM game_progress WHERE id = 1")
-    suspend fun getProgress(): GameProgressEntity?
+    @Query("SELECT * FROM game_progress WHERE id = :characterId")
+    suspend fun getProgress(characterId: Int): GameProgressEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveProgress(progress: GameProgressEntity)
+
+    @Query("DELETE FROM game_progress")
+    suspend fun clearAll()
 }
