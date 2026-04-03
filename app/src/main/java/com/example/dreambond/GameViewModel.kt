@@ -56,6 +56,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             if (savedProgress != null) {
                 _uiState.value = GameUiState(
                     selectedCharacter = character,
+                    affection = savedProgress.affection,
                     currentMessage = character.introLine,
                     latestResponse = "",
                     day = savedProgress.day,
@@ -80,7 +81,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _uiState.update { current ->
             current.copy(
                 affection = current.affection + option.affectionChange,
-                latestResponse = option.response,
+                latestResponse = dynamicReply,
                 sessionEnded = true
             )
         }

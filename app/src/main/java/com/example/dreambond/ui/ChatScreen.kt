@@ -1,5 +1,6 @@
 package com.example.dreambond.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,9 +21,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,11 +51,17 @@ fun ChatScreen(
         else -> Color(0xFFE91E63)
     }
 
+    val portraitRes = when {
+        affection < 10 -> R.drawable.mina_stranger
+        affection < 20 -> R.drawable.mina_friend
+        affection < 50 -> R.drawable.mina_close
+        else -> R.drawable.mina_special
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Transparent
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,14 +126,16 @@ fun ChatScreen(
                     containerColor = Color(0xFF2A3358)
                 )
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.mina_portrait),
-                    contentDescription = "Mina portrait",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                    contentScale = ContentScale.Crop
-                )
+                Crossfade(targetState = portraitRes, label = "MinaImage") { target ->
+                    Image(
+                        painter = painterResource(id = target),
+                        contentDescription = "Mina portrait",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             Card(
