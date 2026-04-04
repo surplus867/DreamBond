@@ -18,7 +18,7 @@ data class GameUiState(
     val currentMessage: String = "",
     val latestResponse: String = "",
     val day: Int = 1,
-    val sessionEnded: Boolean = false
+    val sessionEnded: Boolean = false,
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {

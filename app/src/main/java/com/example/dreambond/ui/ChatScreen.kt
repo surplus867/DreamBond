@@ -21,6 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -31,6 +36,7 @@ import com.example.dreambond.R
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
 import com.example.dreambond.ui.theme.DreamBondTheme
+import kotlinx.coroutines.delay
 
 @Composable
 fun ChatScreen(
@@ -51,10 +57,10 @@ fun ChatScreen(
         else -> Color(0xFFE91E63)
     }
 
-    val portraitRes = when {
-        affection < 10 -> R.drawable.mina_stranger
-        affection < 20 -> R.drawable.mina_friend
-        affection < 50 -> R.drawable.mina_close
+    val portraitRes = when (relationshipLevel) {
+        "Stranger" -> R.drawable.mina_stranger
+        "Friend" -> R.drawable.mina_friend
+        "Close" -> R.drawable.mina_close
         else -> R.drawable.mina_special
     }
 
@@ -119,12 +125,11 @@ fun ChatScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF2A3358)
-                )
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Crossfade(targetState = portraitRes, label = "MinaImage") { target ->
                     Image(
@@ -160,8 +165,10 @@ fun ChatScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
+                    val animatedText = typewriterText(currentMessage)
+
                     Text(
-                        text = currentMessage,
+                        text = animatedText,
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White
                     )
@@ -202,6 +209,17 @@ fun ChatScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (!sessionEnded) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Mina",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFFFD6E7)
+                    )
+                    TypingDots()
+                }
+
                 options.forEach { option ->
                     Button(
                         onClick = { onChooseReply(option) },
@@ -247,6 +265,46 @@ private fun getMoodText(relationshipLevel: String): String {
         "Close" -> "There is warmth and familiarity between you."
         else -> "She seems deeply attached to you tonight."
     }
+}
+
+@Composable
+fun TypingDots() {
+    var dots by remember { mutableStateOf(".") }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            dots = "."
+            delay(300)
+            dots = ".."
+            delay(300)
+            dots = "..."
+            delay(300)
+        }
+    }
+
+    Text(
+        text = dots,
+        style = MaterialTheme.typography.bodyLarge,
+        color = Color.White
+    )
+}
+
+@Composable
+fun typewriterText(
+    text: String,
+    typingSpeed: Long = 25L
+): String {
+    var displayText by remember { mutableStateOf("") }
+
+    LaunchedEffect(text) {
+        displayText = ""
+        text.forEach { char ->
+            displayText += char
+            delay(typingSpeed)
+        }
+    }
+
+    return displayText
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Session Ended")
