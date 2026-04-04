@@ -166,13 +166,17 @@ fun ChatScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    val animatedText = typewriterText(currentMessage)
+                    if (isTyping) {
+                        TypingIndicator(name = character?.name ?: "Mina")
+                    } else {
+                        val animatedText = typewriterText(currentMessage)
 
-                    Text(
-                        text = animatedText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
-                    )
+                        Text(
+                            text = animatedText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 
@@ -209,18 +213,7 @@ fun ChatScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (isTyping) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Mina",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFFFD6E7)
-                    )
-                    TypingDots()
-                }
-            } else if (!sessionEnded) {
+            if (!isTyping && !sessionEnded) {
                 options.forEach { option ->
                     Button(
                         onClick = { onChooseReply(option) },
@@ -238,7 +231,7 @@ fun ChatScreen(
                         )
                     }
                 }
-            } else {
+            } else if (!isTyping) {
                 Button(
                     onClick = onEndDay,
                     modifier = Modifier.fillMaxWidth(),
@@ -268,27 +261,6 @@ private fun getMoodText(relationshipLevel: String): String {
     }
 }
 
-@Composable
-fun TypingDots() {
-    var dots by remember { mutableStateOf(".") }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            dots = "."
-            delay(300)
-            dots = ".."
-            delay(300)
-            dots = "..."
-            delay(300)
-        }
-    }
-
-    Text(
-        text = dots,
-        style = MaterialTheme.typography.bodyMedium,
-        color = Color.White
-    )
-}
 
 @Composable
 fun typewriterText(
