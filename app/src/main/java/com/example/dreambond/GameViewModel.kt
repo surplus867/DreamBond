@@ -6,6 +6,7 @@ import com.example.dreambond.data.GameRepository
 import com.example.dreambond.data.local.GameProgressEntity
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
+import com.example.dreambond.ui.ChatMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ data class GameUiState(
     val latestResponse: String = "",
     val day: Int = 1,
     val sessionEnded: Boolean = false,
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val messages: List<ChatMessage> = emptyList()
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -62,7 +64,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     currentMessage = character.introLine,
                     latestResponse = "",
                     day = savedProgress.day,
-                    sessionEnded = false
+                    sessionEnded = false,
+                    isTyping = false,
+                    messages = listOf(
+                        ChatMessage(
+                            text = character.introLine,
+                            isFromUser = false
+                        )
+                    )
                 )
             } else {
                 _uiState.value = GameUiState(
@@ -71,7 +80,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     currentMessage = character.introLine,
                     latestResponse = "",
                     day = 1,
-                    sessionEnded = false
+                    sessionEnded = false,
+                    isTyping = false,
+                    messages = listOf(
+                        ChatMessage(
+                            text = character.introLine,
+                            isFromUser = false
+                        )
+                    )
                 )
             }
         }
@@ -80,13 +96,19 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun chooseReply(option: DialogueOption) {
         val dynamicReply = getDynamicReply(option)
 
+        // User message + start typing
         _uiState.update { current ->
             current.copy(
                 isTyping = true,
-                sessionEnded = false
+                sessionEnded = false,
+                messages = current.messages + ChatMessage(
+                    text = option.text,
+                    isFromUser = true
+                )
             )
         }
 
+        // Delay + Mina response
         viewModelScope.launch {
             delay(1200)
 
@@ -96,7 +118,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     currentMessage = dynamicReply,
                     latestResponse = dynamicReply,
                     sessionEnded = true,
-                    isTyping = false
+                    isTyping = false,
+                    messages = current.messages + ChatMessage(
+                        text = dynamicReply,
+                        isFromUser = false
+                    )
                 )
             }
         }

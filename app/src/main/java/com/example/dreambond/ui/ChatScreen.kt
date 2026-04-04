@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -18,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.dreambond.R
+import com.example.dreambond.ChatBubble
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
 import com.example.dreambond.ui.theme.DreamBondTheme
@@ -47,6 +51,7 @@ fun ChatScreen(
     latestResponse: String,
     sessionEnded: Boolean,
     isTyping: Boolean,
+    messages: List<ChatMessage>,
     options: List<DialogueOption>,
     onChooseReply: (DialogueOption) -> Unit,
     onEndDay: () -> Unit
@@ -65,15 +70,39 @@ fun ChatScreen(
         else -> R.drawable.mina_special
     }
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Transparent
-    ) {
+        containerColor = Color.Transparent,
+        bottomBar = {
+            if (sessionEnded && !isTyping) {
+                Surface(color = Color.Transparent) {
+                    Button(
+                        onClick = onEndDay,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE91E63),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "End Day 🌙",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .padding(16.dp),
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -154,21 +183,27 @@ fun ChatScreen(
                 ),
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFF2A3358)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = character?.name ?: "Mina",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color(0xFFFFD6E7)
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    if (isTyping) {
-                        TypingIndicator(name = character?.name ?: "Mina")
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    if (messages.isNotEmpty()) {
+                        messages.forEach { message ->
+                            ChatBubble(
+                                message = message,
+                                characterName = character?.name ?: "Mina"
+                            )
+                        }
                     } else {
+                        Text(
+                            text = character?.name ?: "Mina",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFFFFD6E7)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         val animatedText = typewriterText(currentMessage)
 
                         Text(
@@ -176,6 +211,10 @@ fun ChatScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White
                         )
+                    }
+
+                    if (isTyping) {
+                        TypingIndicator(name = character?.name ?: "Mina")
                     }
                 }
             }
@@ -231,22 +270,6 @@ fun ChatScreen(
                         )
                     }
                 }
-            } else if (!isTyping) {
-                Button(
-                    onClick = onEndDay,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE91E63),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = "End Day 🌙",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
             }
         }
     }
@@ -299,6 +322,10 @@ private fun ChatScreenEndPreview() {
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,
             isTyping = false,
+            messages = listOf(
+                ChatMessage(text = "Hi, I have been waiting for you.", isFromUser = false),
+                ChatMessage(text = "I wanted to see you.", isFromUser = true)
+            ),
             options = emptyList(),
             onChooseReply = {},
             onEndDay = {}
