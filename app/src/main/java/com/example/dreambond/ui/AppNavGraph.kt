@@ -53,6 +53,7 @@ fun AppNavGraph(
                 currentMessage = uiState.currentMessage,
                 latestResponse = uiState.latestResponse,
                 sessionEnded = uiState.sessionEnded,
+                isTyping = uiState.isTyping,
                 options = gameViewModel.dialogueOptions,
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)

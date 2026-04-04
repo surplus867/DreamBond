@@ -6,6 +6,7 @@ import com.example.dreambond.data.GameRepository
 import com.example.dreambond.data.local.GameProgressEntity
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ data class GameUiState(
     val latestResponse: String = "",
     val day: Int = 1,
     val sessionEnded: Boolean = false,
+    val isTyping: Boolean = false
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -80,10 +82,23 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         _uiState.update { current ->
             current.copy(
-                affection = current.affection + option.affectionChange,
-                latestResponse = dynamicReply,
-                sessionEnded = true
+                isTyping = true,
+                sessionEnded = false
             )
+        }
+
+        viewModelScope.launch {
+            delay(1200)
+
+            _uiState.update { current ->
+                current.copy(
+                    affection = current.affection + option.affectionChange,
+                    currentMessage = dynamicReply,
+                    latestResponse = dynamicReply,
+                    sessionEnded = true,
+                    isTyping = false
+                )
+            }
         }
     }
 

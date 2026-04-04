@@ -46,6 +46,7 @@ fun ChatScreen(
     currentMessage: String,
     latestResponse: String,
     sessionEnded: Boolean,
+    isTyping: Boolean,
     options: List<DialogueOption>,
     onChooseReply: (DialogueOption) -> Unit,
     onEndDay: () -> Unit
@@ -208,7 +209,7 @@ fun ChatScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (!sessionEnded) {
+            if (isTyping) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -219,7 +220,7 @@ fun ChatScreen(
                     )
                     TypingDots()
                 }
-
+            } else if (!sessionEnded) {
                 options.forEach { option ->
                     Button(
                         onClick = { onChooseReply(option) },
@@ -284,7 +285,7 @@ fun TypingDots() {
 
     Text(
         text = dots,
-        style = MaterialTheme.typography.bodyLarge,
+        style = MaterialTheme.typography.bodyMedium,
         color = Color.White
     )
 }
@@ -325,6 +326,7 @@ private fun ChatScreenEndPreview() {
             currentMessage = "Today was really special.",
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,
+            isTyping = false,
             options = emptyList(),
             onChooseReply = {},
             onEndDay = {}
