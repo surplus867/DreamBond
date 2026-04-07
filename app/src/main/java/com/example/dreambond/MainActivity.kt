@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
+import com.example.dreambond.audio.MinaVoiceManager
 import com.example.dreambond.data.local.DreamBondDatabase
 import com.example.dreambond.ui.AppNavGraph
 
@@ -15,8 +16,12 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var database: DreamBondDatabase
 
+    private lateinit var minaVoiceManager: MinaVoiceManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        minaVoiceManager = MinaVoiceManager(this)
 
         database = Room.databaseBuilder(
             applicationContext,
@@ -32,10 +37,16 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     AppNavGraph(
                         navController = navController,
-                        database = database
+                        database = database,
+                        minaVoiceManager = minaVoiceManager
                     )
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        minaVoiceManager.shutdown()
+        super.onDestroy()
     }
 }

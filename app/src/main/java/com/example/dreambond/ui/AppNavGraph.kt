@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dreambond.GameViewModel
 import com.example.dreambond.GameViewModelFactory
+import com.example.dreambond.audio.MinaVoiceManager
 import com.example.dreambond.data.GameRepository
 import com.example.dreambond.data.local.DreamBondDatabase
 import com.example.dreambond.navigation.Screen
@@ -16,7 +17,8 @@ import com.example.dreambond.navigation.Screen
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    database: DreamBondDatabase
+    database: DreamBondDatabase,
+    minaVoiceManager: MinaVoiceManager
 ) {
     val repository = GameRepository(database.gameProgressDao())
     val factory = GameViewModelFactory(repository)
@@ -59,6 +61,7 @@ fun AppNavGraph(
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)
                 },
+                onSpeakLatestResponse = minaVoiceManager::speak,
                 onEndDay = {
                     gameViewModel.saveProgress()
                     navController.navigate(Screen.EndDay.route)

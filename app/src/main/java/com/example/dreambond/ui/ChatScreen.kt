@@ -9,11 +9,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,8 +55,16 @@ fun ChatScreen(
     messages: List<ChatMessage>,
     options: List<DialogueOption>,
     onChooseReply: (DialogueOption) -> Unit,
-    onEndDay: () -> Unit
+    onEndDay: () -> Unit,
+    onSpeakLatestResponse: (String) -> Unit
 ) {
+    LaunchedEffect(latestResponse, isTyping, sessionEnded) {
+        if (sessionEnded && latestResponse.isNotBlank() && !isTyping) {
+            delay(300)
+            onSpeakLatestResponse(latestResponse)
+        }
+    }
+
     val statusColor = when (relationshipLevel) {
         "Stranger" -> Color.Gray
         "Friend" -> Color(0xFF4CAF50)
@@ -69,6 +78,11 @@ fun ChatScreen(
         "Close" -> R.drawable.mina_close
         else -> R.drawable.mina_special
     }
+
+    val visibleMessages = messages.filter { it.text.isNotBlank() }
+    val visibleCurrentMessage = currentMessage.trim()
+    val shouldShowMessageContainer =
+        !sessionEnded && (visibleMessages.isNotEmpty() || visibleCurrentMessage.isNotEmpty() || isTyping)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -102,7 +116,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -173,48 +187,67 @@ fun ChatScreen(
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(
-                    topStart = 20.dp,
-                    topEnd = 20.dp,
-                    bottomStart = 8.dp,
-                    bottomEnd = 20.dp
-                ),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF2A3358)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+            if (shouldShowMessageContainer) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp, max = 240.dp),
+                    shape = RoundedCornerShape(
+                        topStart = 20.dp,
+                        topEnd = 20.dp,
+                        bottomStart = 8.dp,
+                        bottomEnd = 20.dp
+                    ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF2A3358)
+                    )
                 ) {
-                    if (messages.isNotEmpty()) {
-                        messages.forEach { message ->
-                            ChatBubble(
-                                message = message,
-                                characterName = character?.name ?: "Mina"
-                            )
-                        }
+                    val animatedText = if (visibleMessages.isEmpty() && visibleCurrentMessage.isNotEmpty()) {
+                        typewriterText(visibleCurrentMessage)
                     } else {
-                        Text(
-                            text = character?.name ?: "Mina",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFFFFD6E7)
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        val animatedText = typewriterText(currentMessage)
-
-                        Text(
-                            text = animatedText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
-                        )
+                        ""
                     }
 
-                    if (isTyping) {
-                        TypingIndicator(name = character?.name ?: "Mina")
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (visibleMessages.isNotEmpty()) {
+                            items(visibleMessages) { message ->
+                                ChatBubble(
+                                    message = message,
+                                    characterName = character?.name ?: "Mina"
+                                )
+                            }
+                        } else if (visibleCurrentMessage.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = character?.name ?: "Mina",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color(0xFFFFD6E7)
+                                )
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+
+                            item {
+                                Text(
+                                    text = animatedText,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        if (isTyping) {
+                            item {
+                                TypingIndicator(name = character?.name ?: "Mina")
+                            }
+                        }
                     }
                 }
             }
@@ -253,24 +286,33 @@ fun ChatScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (!isTyping && !sessionEnded) {
-                options.forEach { option ->
-                    Button(
-                        onClick = { onChooseReply(option) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF5561A8),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(
-                            text = option.text,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 132.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(options) { option ->
+                        Button(
+                            onClick = { onChooseReply(option) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF5561A8),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = option.text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(if (sessionEnded) 90.dp else 24.dp))
         }
     }
 }
@@ -328,7 +370,8 @@ private fun ChatScreenEndPreview() {
             ),
             options = emptyList(),
             onChooseReply = {},
-            onEndDay = {}
+            onEndDay = {},
+            onSpeakLatestResponse = {}
         )
     }
 }
