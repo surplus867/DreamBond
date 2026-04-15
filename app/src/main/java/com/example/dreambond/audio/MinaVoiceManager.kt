@@ -17,18 +17,22 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
         if (status != TextToSpeech.SUCCESS) return
 
         val engine = tts ?: return
-        val localeResult = engine.setLanguage(Locale.US)
-        if (localeResult == TextToSpeech.LANG_MISSING_DATA || localeResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+
+        val locale = Locale.KOREAN
+        val localeResult = engine.setLanguage(locale)
+        if (localeResult ==
+            TextToSpeech.LANG_MISSING_DATA ||
+            localeResult == TextToSpeech.LANG_NOT_SUPPORTED
+        ) {
             return
         }
 
-        // Prefer the highest quality US voice with lower latency when available.
-        selectBestUsVoice(engine)?.let { bestVoice ->
+        selectBestKoreanVoice(engine)?.let { bestVoice ->
             engine.voice = bestVoice
         }
 
-        engine.setSpeechRate(0.96f)
-        engine.setPitch(0.98f)
+        engine.setSpeechRate(0.84f)
+        engine.setPitch(1.18f)
         isReady = true
     }
 
@@ -50,13 +54,21 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
         tts?.shutdown()
     }
 
-    private fun selectBestUsVoice(engine: TextToSpeech): Voice? {
+    private fun selectBestKoreanVoice(engine: TextToSpeech): Voice? {
         return engine.voices
             ?.asSequence()
-            ?.filter { it.locale?.language == Locale.US.language }
-            ?.maxWithOrNull(
-                compareBy<Voice> { it.quality }
-                    .thenByDescending { -it.latency }
+            ?.filter { voice ->
+                voice.locale?.language == Locale.KOREAN.language
+            }
+            ?.sortedWith(
+                compareBy<Voice> {
+                    // Prefer voices that might be female (name hint)
+                    val name = it.name.lowercase()
+                    !(name.contains("female") || name.contains("feminine"))
+                }
+                    .thenByDescending { it.quality }
+                    .thenBy { it.latency }
             )
+            ?.firstOrNull()
     }
 }
