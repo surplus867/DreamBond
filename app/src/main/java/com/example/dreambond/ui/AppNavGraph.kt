@@ -58,8 +58,13 @@ fun AppNavGraph(
                 isTyping = uiState.isTyping,
                 messages = uiState.messages,
                 options = gameViewModel.dialogueOptions,
+                showDateQuestion = uiState.showDateQuestion,
+                dateOptions = uiState.dateOptions,
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)
+                },
+                onSelectFavoriteDate = { date ->
+                    gameViewModel.selectFavoriteDate(date)
                 },
                 onSpeakLatestResponse = minaVoiceManager::speak,
                 onEndDay = {

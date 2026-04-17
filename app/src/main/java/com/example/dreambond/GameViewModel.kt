@@ -6,6 +6,7 @@ import com.example.dreambond.data.GameRepository
 import com.example.dreambond.data.local.GameProgressEntity
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
+import com.example.dreambond.model.MinaMemory
 import com.example.dreambond.ui.ChatMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,10 +23,14 @@ data class GameUiState(
     val day: Int = 1,
     val sessionEnded: Boolean = false,
     val isTyping: Boolean = false,
-    val messages: List<ChatMessage> = emptyList()
+    val messages: List<ChatMessage> = emptyList(),
+    val memory: MinaMemory = MinaMemory(),
+    val showDateQuestion: Boolean = false,
+    val dateOptions: List<String> = emptyList()
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
+
     val characters = listOf(
         GirlfriendCharacter(
             id = 1,
@@ -34,6 +39,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             introLine = "You came back tonight. I was waiting for you."
         )
     )
+
     val dialogueOptions = listOf(
         DialogueOption(
             text = "I wanted to see you.",
@@ -51,12 +57,13 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             response = "Curious? That is still a reason to come back, I guess."
         )
     )
+
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
+
     fun selectCharacter(character: GirlfriendCharacter) {
         viewModelScope.launch {
             val savedProgress = repository.getProgress(character.id)
-
             if (savedProgress != null) {
                 _uiState.value = GameUiState(
                     selectedCharacter = character,
@@ -66,12 +73,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     day = savedProgress.day,
                     sessionEnded = false,
                     isTyping = false,
-                    messages = listOf(
-                        ChatMessage(
-                            text = character.introLine,
-                            isFromUser = false
-                        )
-                    )
+                    messages = listOf(ChatMessage(text = character.introLine, isFromUser = false))
                 )
             } else {
                 _uiState.value = GameUiState(
@@ -82,12 +84,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     day = 1,
                     sessionEnded = false,
                     isTyping = false,
-                    messages = listOf(
-                        ChatMessage(
-                            text = character.introLine,
-                            isFromUser = false
-                        )
-                    )
+                    messages = listOf(ChatMessage(text = character.introLine, isFromUser = false))
                 )
             }
         }
@@ -101,17 +98,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             current.copy(
                 isTyping = true,
                 sessionEnded = false,
-                messages = current.messages + ChatMessage(
-                    text = option.text,
-                    isFromUser = true
-                )
+                messages = current.messages + ChatMessage(text = option.text, isFromUser = true),
+                memory = current.memory.copy(lastChoice = option.text)
             )
         }
 
         // Delay + Mina response
         viewModelScope.launch {
             delay(1200)
-
             _uiState.update { current ->
                 current.copy(
                     affection = current.affection + option.affectionChange,
@@ -130,88 +124,163 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun nextDay() {
         val character = _uiState.value.selectedCharacter
+        val memory = _uiState.value.memory
+
+        val intro = when {
+            memory.favoriteDate.isBlank() -> "Before tonight begins... can I ask you something?"
+            memory.lastChoice == "I wanted to see you." -> "You came back tonight... I was hoping you would."
+            memory.lastChoice == "I could not sleep." -> "Another quiet night... are you having trouble sleeping again?"
+            memory.lastChoice == "I was just curious." -> "You're here again... still curious about me?"
+            else -> character?.introLine ?: ""
+        }
+
         _uiState.update { current ->
             current.copy(
                 day = current.day + 1,
-                currentMessage = character?.introLine ?: "",
+                currentMessage = intro,
                 latestResponse = "",
-                sessionEnded = false
+                sessionEnded = false,
+                isTyping = false,
+                messages = listOf(
+                    ChatMessage(
+                        text = intro,
+                        isFromUser = false
+                    )
+                )
             )
         }
-    }
 
-    fun saveProgress() {
-        val state = _uiState.value
-        val character = state.selectedCharacter ?: return
-
-        val progress = GameProgressEntity(
-            id = character.id,
-            selectedCharacter = character.name,
-            affection = state.affection,
-            day = state.day
-        )
-
-        viewModelScope.launch {
-            repository.saveProgress(progress)
+        if (_uiState.value.memory.favoriteDate.isBlank()) {
+            askFavoriteDateQuestion()
         }
-    }
-
-    fun resetGame() {
-        _uiState.value = GameUiState()
-    }
-
-    fun clearAllProgress() {
-        viewModelScope.launch {
-            repository.clearAllProgress()
-            _uiState.value = GameUiState()
         }
-    }
 
-    fun getRelationShipLevel(): String {
-        val affection = _uiState.value.affection
-        return when {
-            affection < 10 -> "Stranger"
-            affection < 20 -> "Friend"
-            affection < 50 -> "Close"
-            else -> "Special"
-        }
-    }
+        fun saveProgress() {
+            val state = _uiState.value
+            val character = state.selectedCharacter ?: return
 
-    fun getDynamicReply(option: DialogueOption): String {
-        val affection = _uiState.value.affection
+            val progress = GameProgressEntity(
+                id = character.id,
+                selectedCharacter = character.name,
+                affection = state.affection,
+                day = state.day
+            )
 
-        return when {
-            affection < 10 -> {
-                when (option.text) {
-                    "I wanted to see you." -> "You wanted to see me... ? I didn't expect that."
-                    "I could not sleep." -> "Then maybe the night brought you here for a reason."
-                    else -> "You're a little hard to read... but I don't mind."
-                }
-            }
-
-            affection < 25 -> {
-                when (option.text) {
-                    "I wanted to see you." -> "I'm glad you came back tonight."
-                    "I could not sleep." -> "Then stay with me for a while. It's peaceful here."
-                    else -> "You always say things that make me curious."
-                }
-            }
-
-            affection < 50 -> {
-                when (option.text) {
-                    "I wanted to see you." -> "I was hoping you'd say that."
-                    "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
-                    else -> "You know... you're kind of cute when you act mysterious."
-                }
-            }
-
-            else -> {
-                when (option.text) {
-                    "I wanted to see you." -> "I missed you... I was waiting for you again."
-                    "I could not sleep." -> "Then stay. Nights feel softer when you're here."
-                    else -> "Even when you pretend otherwise, you always come back to me."
-                }
+            viewModelScope.launch {
+                repository.saveProgress(progress)
             }
         }
+
+        fun resetGame() {
+            clearAllProgress()
+        }
+
+        fun clearAllProgress() {
+            viewModelScope.launch {
+                repository.clearAllProgress()
+                _uiState.value = GameUiState()
+            }
+        }
+
+        fun getRelationShipLevel(): String {
+            val affection = _uiState.value.affection
+            return when {
+                affection < 10 -> "Stranger"
+                affection < 20 -> "Friend"
+                affection < 50 -> "Close"
+                else -> "Special"
+            }
+        }
+
+        fun getDynamicReply(option: DialogueOption): String {
+            val affection = _uiState.value.affection
+            val lastChoice = _uiState.value.memory.lastChoice
+            val favoriteDate = _uiState.value.memory.favoriteDate
+
+            return when {
+                affection < 10 -> {
+                    when (option.text) {
+                        "I wanted to see you." -> {
+                            if (lastChoice == "I could not sleep.") {
+                                "You came back again... was it another restless night?"
+                            } else {
+                                "You wanted to see me... ? I didn't expect that."
+                            }
+                        }
+
+                        "I could not sleep." -> "Then maybe the night brought you here for a reason."
+                        else -> "You're a little hard to read... but I don't mind."
+                    }
+                }
+
+                affection < 25 -> {
+                    when (option.text) {
+                        "I wanted to see you." -> {
+                            if (lastChoice == "I wanted to see you.") {
+                                "You always know how to make me smile."
+                            } else {
+                                if (favoriteDate.isNotBlank()) {
+                                    "I'm glad you came back... maybe someday we can have that $favoriteDate together."
+                                } else {
+                                    "I'm glad you came back tonight."
+                                }
+                            }
+                        }
+
+                        "I could not sleep." -> "Then stay with me for a while. It's peaceful here."
+                        else -> "You always say things that make me curious."
+                    }
+                }
+
+                affection < 50 -> {
+                    when (option.text) {
+                        "I wanted to see you." -> "I was hoping you'd say that."
+                        "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
+                        else -> "You know... you're kind of cute when you act mysterious."
+                    }
+                }
+
+                else -> {
+                    when (option.text) {
+                        "I wanted to see you." -> "I missed you... I was waiting for you again."
+                        "I could not sleep." -> "Then stay. Nights feel softer when you're here."
+                        else -> "Even when you pretend otherwise, you always come back to me."
+                    }
+                }
+            }
+        }
+
+        fun askFavoriteDateQuestion() {
+            _uiState.update { current ->
+                current.copy(
+                    showDateQuestion = true,
+                    dateOptions = listOf("Night walk", "Cafe date", "Movie night"),
+                    messages = current.messages + ChatMessage(
+                        text = "What kind of date would you like with me?",
+                        isFromUser = false
+                    )
+                )
+            }
+        }
+
+        fun selectFavoriteDate(date: String) {
+            _uiState.update { current ->
+                current.copy(
+                    showDateQuestion = false,
+                    dateOptions = emptyList(),
+                    memory = current.memory.copy(
+                        favoriteDate = date
+                    ),
+                    messages = current.messages +
+                            ChatMessage(
+                                text = date,
+                                isFromUser = true
+                            ) +
+                            ChatMessage(
+                                text = "Mm... $date sounds nice. I'll remember that.",
+                                isFromUser = false
+                            )
+                )
+            }
+        }
     }
-}
