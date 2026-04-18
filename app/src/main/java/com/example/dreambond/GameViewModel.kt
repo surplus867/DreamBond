@@ -26,7 +26,9 @@ data class GameUiState(
     val messages: List<ChatMessage> = emptyList(),
     val memory: MinaMemory = MinaMemory(),
     val showDateQuestion: Boolean = false,
-    val dateOptions: List<String> = emptyList()
+    val dateOptions: List<String> = emptyList(),
+    val showFoodQuestion: Boolean = false,
+    val foodOptions: List<String> = emptyList()
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -130,6 +132,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val intro = when {
             favoriteDate.isNotBlank() ->
                 "It's quiet tonight... it reminds me of a $favoriteDate. I'm glad you're here."
+
             memory.favoriteDate.isBlank() -> "Before tonight begins... can I ask you something?"
             memory.lastChoice == "I wanted to see you." -> "You came back tonight... I was hoping you would."
             memory.lastChoice == "I could not sleep." -> "Another quiet night... are you having trouble sleeping again?"
@@ -155,137 +158,178 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         if (_uiState.value.memory.favoriteDate.isBlank()) {
             askFavoriteDateQuestion()
+        } else if (
+            _uiState.value.memory.favoriteDate.isNotBlank() &&
+            _uiState.value.memory.favoriteFood.isBlank()
+        ) {
+            askFavoriteFoodQuestion()
         }
+    }
+
+    fun saveProgress() {
+        val state = _uiState.value
+        val character = state.selectedCharacter ?: return
+
+        val progress = GameProgressEntity(
+            id = character.id,
+            selectedCharacter = character.name,
+            affection = state.affection,
+            day = state.day
+        )
+
+        viewModelScope.launch {
+            repository.saveProgress(progress)
         }
+    }
 
-        fun saveProgress() {
-            val state = _uiState.value
-            val character = state.selectedCharacter ?: return
+    fun resetGame() {
+        clearAllProgress()
+    }
 
-            val progress = GameProgressEntity(
-                id = character.id,
-                selectedCharacter = character.name,
-                affection = state.affection,
-                day = state.day
-            )
-
-            viewModelScope.launch {
-                repository.saveProgress(progress)
-            }
+    fun clearAllProgress() {
+        viewModelScope.launch {
+            repository.clearAllProgress()
+            _uiState.value = GameUiState()
         }
+    }
 
-        fun resetGame() {
-            clearAllProgress()
+    fun getRelationShipLevel(): String {
+        val affection = _uiState.value.affection
+        return when {
+            affection < 10 -> "Stranger"
+            affection < 20 -> "Friend"
+            affection < 50 -> "Close"
+            else -> "Special"
         }
+    }
 
-        fun clearAllProgress() {
-            viewModelScope.launch {
-                repository.clearAllProgress()
-                _uiState.value = GameUiState()
-            }
-        }
+    fun getDynamicReply(option: DialogueOption): String {
+        val affection = _uiState.value.affection
+        val lastChoice = _uiState.value.memory.lastChoice
+        val favoriteDate = _uiState.value.memory.favoriteDate
+        val favoriteFood = _uiState.value.memory.favoriteFood
 
-        fun getRelationShipLevel(): String {
-            val affection = _uiState.value.affection
-            return when {
-                affection < 10 -> "Stranger"
-                affection < 20 -> "Friend"
-                affection < 50 -> "Close"
-                else -> "Special"
-            }
-        }
-
-        fun getDynamicReply(option: DialogueOption): String {
-            val affection = _uiState.value.affection
-            val lastChoice = _uiState.value.memory.lastChoice
-            val favoriteDate = _uiState.value.memory.favoriteDate
-
-            return when {
-                affection < 10 -> {
-                    when (option.text) {
-                        "I wanted to see you." -> {
-                            if (lastChoice == "I could not sleep.") {
-                                "You came back again... was it another restless night?"
-                            } else {
-                                "You wanted to see me... ? I didn't expect that."
-                            }
+        return when {
+            affection < 10 -> {
+                when (option.text) {
+                    "I wanted to see you." -> {
+                        if (lastChoice == "I could not sleep.") {
+                            "You came back again... was it another restless night?"
+                        } else {
+                            "You wanted to see me... ? I didn't expect that."
                         }
-
-                        "I could not sleep." -> "Then maybe the night brought you here for a reason."
-                        else -> "You're a little hard to read... but I don't mind."
                     }
-                }
 
-                affection < 25 -> {
-                    when (option.text) {
-                        "I wanted to see you." -> {
-                            if (favoriteDate.isNotBlank()) {
-                                "I'm glad you came back... you once said you like $favoriteDate. I keep thinking about that."
-                            } else {
-                                "I'm glad you came back tonight."
-                            }
-                        }
-
-                        "I could not sleep." -> {
-                            if (favoriteDate == "Night walk") {
-                                "Maybe a quiet night walk would help you rest... you said you liked that."
-                            } else {
-                                "Then stay with me for a while. It's peaceful here."
-                            }
-                        }
-                        else -> "You always say things that make me curious."
-                    }
-                }
-
-                affection < 50 -> {
-                    when (option.text) {
-                        "I wanted to see you." -> "I was hoping you'd say that."
-                        "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
-                        else -> "You know... you're kind of cute when you act mysterious."
-                    }
-                }
-
-                else -> {
-                    when (option.text) {
-                        "I wanted to see you." -> "I missed you... I was waiting for you again."
-                        "I could not sleep." -> "Then stay. Nights feel softer when you're here."
-                        else -> "Even when you pretend otherwise, you always come back to me."
-                    }
+                    "I could not sleep." -> "Then maybe the night brought you here for a reason."
+                    else -> "You're a little hard to read... but I don't mind."
                 }
             }
-        }
 
-        fun askFavoriteDateQuestion() {
-            _uiState.update { current ->
-                current.copy(
-                    showDateQuestion = true,
-                    dateOptions = listOf("Night walk", "Cafe date", "Movie night"),
-                    messages = current.messages + ChatMessage(
-                        text = "What kind of date would you like with me?",
-                        isFromUser = false
-                    )
-                )
+            affection < 25 -> {
+                when (option.text) {
+                    "I wanted to see you." -> {
+                        if (favoriteFood.isNotBlank()) {
+                            "I'm glad you came back… maybe we can share some $favoriteFood together someday."
+                        } else {
+                            "I'm glad you came back tonight."
+                        }
+                    }
+
+                    "I could not sleep." -> {
+                        if (favoriteDate == "Night walk") {
+                            "Maybe a quiet night walk would help you rest... you said you liked that."
+                        } else {
+                            "Then stay with me for a while. It's peaceful here."
+                        }
+                    }
+
+                    else -> "You always say things that make me curious."
+                }
             }
-        }
 
-        fun selectFavoriteDate(date: String) {
-            _uiState.update { current ->
-                current.copy(
-                    showDateQuestion = false,
-                    dateOptions = emptyList(),
-                    memory = current.memory.copy(
-                        favoriteDate = date
-                    ),
-                    messages = current.messages +
-                            ChatMessage(
-                                text = date,
-                                isFromUser = true
-                            ) +
-                            ChatMessage(
-                                text = "Mm... $date sounds nice. I'll remember that.",
-                                isFromUser = false
-                            )
-                )
+            affection < 50 -> {
+                when (option.text) {
+                    "I wanted to see you." -> "I was hoping you'd say that."
+                    "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
+                    else -> "You know... you're kind of cute when you act mysterious."
+                }
+            }
+
+            else -> {
+                when (option.text) {
+                    "I wanted to see you." -> "I missed you... I was waiting for you again."
+                    "I could not sleep." -> "Then stay. Nights feel softer when you're here."
+                    else -> "Even when you pretend otherwise, you always come back to me."
+                }
             }
         }
     }
+
+    fun askFavoriteDateQuestion() {
+        _uiState.update { current ->
+            current.copy(
+                showDateQuestion = true,
+                dateOptions = listOf("Night walk", "Cafe date", "Movie night"),
+                messages = current.messages + ChatMessage(
+                    text = "What kind of date would you like with me?",
+                    isFromUser = false
+                )
+            )
+        }
+    }
+
+    fun selectFavoriteDate(date: String) {
+        _uiState.update { current ->
+            current.copy(
+                showDateQuestion = false,
+                dateOptions = emptyList(),
+                memory = current.memory.copy(
+                    favoriteDate = date
+                ),
+                messages = current.messages +
+                        ChatMessage(
+                            text = date,
+                            isFromUser = true
+                        ) +
+                        ChatMessage(
+                            text = "Mm... $date sounds nice. I'll remember that.",
+                            isFromUser = false
+                        )
+            )
+        }
+    }
+
+    fun askFavoriteFoodQuestion() {
+        _uiState.update { current ->
+            current.copy(
+                showFoodQuestion = true,
+                foodOptions = listOf("Bingsu 🍧", "Coffee ☕", "Cake 🍰"),
+                messages = current.messages + ChatMessage(
+                    text = "What kind of dessert do you like?",
+                    isFromUser = false
+                )
+            )
+        }
+    }
+
+    fun selectFavoriteFood(food: String) {
+        _uiState.update { current ->
+            current.copy(
+                showFoodQuestion = false,
+                foodOptions = emptyList(),
+                memory = current.memory.copy(
+                    favoriteFood = food
+                ),
+                messages = current.messages +
+                        ChatMessage(
+                            text = food,
+                            isFromUser = true
+                        ) +
+                        ChatMessage(
+                            text = "Mm… $food sounds nice. It feels like something we could enjoy on a quiet night.",
+                            isFromUser = false
+                        )
+            )
+        }
+    }
+}

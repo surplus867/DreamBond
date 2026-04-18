@@ -60,11 +60,16 @@ fun AppNavGraph(
                 options = gameViewModel.dialogueOptions,
                 showDateQuestion = uiState.showDateQuestion,
                 dateOptions = uiState.dateOptions,
+                showFoodQuestion = uiState.showFoodQuestion,
+                foodOptions = uiState.foodOptions,
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)
                 },
                 onSelectFavoriteDate = { date ->
                     gameViewModel.selectFavoriteDate(date)
+                },
+                onSelectFavoriteFood = { food ->
+                    gameViewModel.selectFavoriteFood(food)
                 },
                 onSpeakLatestResponse = minaVoiceManager::speak,
                 onEndDay = {

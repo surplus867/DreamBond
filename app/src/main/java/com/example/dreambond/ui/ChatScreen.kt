@@ -61,8 +61,11 @@ fun ChatScreen(
     options: List<DialogueOption>,
     showDateQuestion: Boolean,
     dateOptions: List<String>,
+    showFoodQuestion: Boolean,
+    foodOptions: List<String>,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
+    onSelectFavoriteFood: (String) -> Unit,
     onEndDay: () -> Unit,
     onSpeakLatestResponse: (String) -> Unit
 ) {
@@ -304,45 +307,69 @@ fun ChatScreen(
                 }
             }
 
-            AnimatedVisibility(
-                visible = !isTyping && !sessionEnded,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 })
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (showDateQuestion) {
-                        dateOptions.forEach { date ->
-                            Button(
-                                onClick = { onSelectFavoriteDate(date) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF7B5EA7),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Text(
-                                    text = date,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
+            if (!isTyping && !sessionEnded) {
+                Column(
+                    modifier = Modifier.navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when {
+                        showDateQuestion -> {
+                            dateOptions.forEach { date ->
+                                Button(
+                                    onClick = { onSelectFavoriteDate(date) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF7B5EA7),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text(
+                                        text = date,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
-                    } else {
-                        options.forEach { option ->
-                            Button(
-                                onClick = { onChooseReply(option) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF5561A8),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Text(
-                                    text = option.text,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
+
+                        showFoodQuestion -> {
+                            foodOptions.forEach { food ->
+                                Button(
+                                    onClick = { onSelectFavoriteFood(food) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF8D6E63),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text(
+                                        text = food,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        else -> {
+                            options.forEach { option ->
+                                Button(
+                                    onClick = { onChooseReply(option) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF5561A8),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text(
+                                        text = option.text,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -406,8 +433,11 @@ private fun ChatScreenEndPreview() {
             options = emptyList(),
             showDateQuestion = false,
             dateOptions = emptyList(),
+            showFoodQuestion = false,
+            foodOptions = emptyList(),
             onChooseReply = {},
             onSelectFavoriteDate = {},
+            onSelectFavoriteFood = {},
             onEndDay = {},
             onSpeakLatestResponse = {}
         )
