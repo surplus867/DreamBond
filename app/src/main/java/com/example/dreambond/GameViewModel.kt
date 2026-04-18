@@ -125,8 +125,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun nextDay() {
         val character = _uiState.value.selectedCharacter
         val memory = _uiState.value.memory
+        val favoriteDate = memory.favoriteDate
 
         val intro = when {
+            favoriteDate.isNotBlank() ->
+                "It's quiet tonight... it reminds me of a $favoriteDate. I'm glad you're here."
             memory.favoriteDate.isBlank() -> "Before tonight begins... can I ask you something?"
             memory.lastChoice == "I wanted to see you." -> "You came back tonight... I was hoping you would."
             memory.lastChoice == "I could not sleep." -> "Another quiet night... are you having trouble sleeping again?"
@@ -216,18 +219,20 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 affection < 25 -> {
                     when (option.text) {
                         "I wanted to see you." -> {
-                            if (lastChoice == "I wanted to see you.") {
-                                "You always know how to make me smile."
+                            if (favoriteDate.isNotBlank()) {
+                                "I'm glad you came back... you once said you like $favoriteDate. I keep thinking about that."
                             } else {
-                                if (favoriteDate.isNotBlank()) {
-                                    "I'm glad you came back... maybe someday we can have that $favoriteDate together."
-                                } else {
-                                    "I'm glad you came back tonight."
-                                }
+                                "I'm glad you came back tonight."
                             }
                         }
 
-                        "I could not sleep." -> "Then stay with me for a while. It's peaceful here."
+                        "I could not sleep." -> {
+                            if (favoriteDate == "Night walk") {
+                                "Maybe a quiet night walk would help you rest... you said you liked that."
+                            } else {
+                                "Then stay with me for a while. It's peaceful here."
+                            }
+                        }
                         else -> "You always say things that make me curious."
                     }
                 }
