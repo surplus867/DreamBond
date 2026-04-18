@@ -1,5 +1,8 @@
 package com.example.dreambond
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,36 +24,41 @@ fun ChatBubble(
     message: ChatMessage,
     characterName: String
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isFromUser) {
-            Arrangement.End
-        } else {
-            Arrangement.Start
-        }
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
     ) {
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (message.isFromUser) {
-                    Color(0xFF5561A8)
-                } else {
-                    Color(0xFF2A3358)
-                }
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (message.isFromUser) {
+                Arrangement.End
+            } else {
+                Arrangement.Start
+            }
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    text = if (message.isFromUser) "You" else characterName,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (message.isFromUser) Color.White else Color(0xFFFFD6E7)
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (message.isFromUser) {
+                        Color(0xFF5561A8)
+                    } else {
+                        Color(0xFF2A3358)
+                    }
                 )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = if (message.isFromUser) "You" else characterName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (message.isFromUser) Color.White else Color(0xFFFFD6E7)
+                    )
 
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White
-                )
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White
+                    )
+                }
             }
         }
     }

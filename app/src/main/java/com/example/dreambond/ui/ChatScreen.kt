@@ -1,6 +1,9 @@
 package com.example.dreambond.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -257,7 +260,12 @@ fun ChatScreen(
 
                             if (isTyping) {
                                 item {
-                                    TypingIndicator(name = character?.name ?: "Mina")
+                                    AnimatedVisibility(
+                                        visible = true,
+                                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
+                                    ) {
+                                        TypingIndicator(name = character?.name ?: "Mina")
+                                    }
                                 }
                             }
                         }
@@ -296,13 +304,11 @@ fun ChatScreen(
                 }
             }
 
-            if (!isTyping && !sessionEnded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            AnimatedVisibility(
+                visible = !isTyping && !sessionEnded,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 })
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (showDateQuestion) {
                         dateOptions.forEach { date ->
                             Button(
