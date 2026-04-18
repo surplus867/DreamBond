@@ -63,9 +63,12 @@ fun ChatScreen(
     dateOptions: List<String>,
     showFoodQuestion: Boolean,
     foodOptions: List<String>,
+    showTimeQuestion: Boolean,
+    timeOptions: List<String>,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
     onSelectFavoriteFood: (String) -> Unit,
+    onSelectFavoriteTime: (String) -> Unit,
     onEndDay: () -> Unit,
     onSpeakLatestResponse: (String) -> Unit
 ) {
@@ -353,6 +356,26 @@ fun ChatScreen(
                             }
                         }
 
+                        showTimeQuestion -> {
+                            timeOptions.forEach { time ->
+                                Button(
+                                    onClick = { onSelectFavoriteTime(time) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF37474F),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text(
+                                        text = time,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         else -> {
                             options.forEach { option ->
                                 Button(
@@ -435,9 +458,12 @@ private fun ChatScreenEndPreview() {
             dateOptions = emptyList(),
             showFoodQuestion = false,
             foodOptions = emptyList(),
+            showTimeQuestion = false,
+            timeOptions = emptyList(),
             onChooseReply = {},
             onSelectFavoriteDate = {},
             onSelectFavoriteFood = {},
+            onSelectFavoriteTime = {},
             onEndDay = {},
             onSpeakLatestResponse = {}
         )

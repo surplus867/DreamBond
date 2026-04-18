@@ -45,6 +45,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        minaVoiceManager.stop()
+    }
+
     override fun onDestroy() {
         minaVoiceManager.shutdown()
         super.onDestroy()

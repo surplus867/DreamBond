@@ -28,7 +28,9 @@ data class GameUiState(
     val showDateQuestion: Boolean = false,
     val dateOptions: List<String> = emptyList(),
     val showFoodQuestion: Boolean = false,
-    val foodOptions: List<String> = emptyList()
+    val foodOptions: List<String> = emptyList(),
+    val showTimeQuestion: Boolean = false,
+    val timeOptions: List<String> = emptyList()
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -127,17 +129,45 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun nextDay() {
         val character = _uiState.value.selectedCharacter
         val memory = _uiState.value.memory
-        val favoriteDate = memory.favoriteDate
+
+        val shouldAskDate = memory.favoriteDate.isBlank()
+        val shouldAskFood = memory.favoriteDate.isNotBlank() && memory.favoriteFood.isBlank()
+        val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
         val intro = when {
-            favoriteDate.isNotBlank() ->
-                "It's quiet tonight... it reminds me of a $favoriteDate. I'm glad you're here."
+            memory.favoriteTime == "Night 🌙" ->
+                "The night feels especially quiet today... I thought of you."
+            memory.favoriteTime == "Rain 🌧️" ->
+                "Something about soft rain always makes me think of warm conversations."
+            memory.favoriteTime == "Sunset 🌆" ->
+                "Sunset has such a gentle feeling... I wish you could see it with me."
+            shouldAskTime ->
+                "I keep thinking about what you told me... can I ask you one more thing?"
+            shouldAskFood ->
+                "I've been curious about you more and more... is it okay if I ask something?"
+            memory.favoriteDate.isBlank() ->
+                "Before tonight begins... can I ask you something?"
+            memory.lastChoice == "I wanted to see you." ->
+                "You came back tonight... I was hoping you would."
+            memory.lastChoice == "I could not sleep." ->
+                "Another quiet night... are you having trouble sleeping again?"
+            memory.lastChoice == "I was just curious." ->
+                "You're here again... still curious about me?"
+            else ->
+                character?.introLine ?: ""
+        }
 
-            memory.favoriteDate.isBlank() -> "Before tonight begins... can I ask you something?"
-            memory.lastChoice == "I wanted to see you." -> "You came back tonight... I was hoping you would."
-            memory.lastChoice == "I could not sleep." -> "Another quiet night... are you having trouble sleeping again?"
-            memory.lastChoice == "I was just curious." -> "You're here again... still curious about me?"
-            else -> character?.introLine ?: ""
+        if (shouldAskDate) {
+            askFavoriteDateQuestion(intro)
+            return
+        }
+        if (shouldAskFood) {
+            askFavoriteFoodQuestion(intro)
+            return
+        }
+        if (shouldAskTime) {
+            askFavoriteTimeQuestion(intro)
+            return
         }
 
         _uiState.update { current ->
@@ -147,22 +177,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 latestResponse = "",
                 sessionEnded = false,
                 isTyping = false,
-                messages = listOf(
-                    ChatMessage(
-                        text = intro,
-                        isFromUser = false
-                    )
-                )
+                messages = listOf(ChatMessage(text = intro, isFromUser = false)),
+                showDateQuestion = false,
+                dateOptions = emptyList(),
+                showFoodQuestion = false,
+                foodOptions = emptyList(),
+                showTimeQuestion = false,
+                timeOptions = emptyList()
             )
-        }
-
-        if (_uiState.value.memory.favoriteDate.isBlank()) {
-            askFavoriteDateQuestion()
-        } else if (
-            _uiState.value.memory.favoriteDate.isNotBlank() &&
-            _uiState.value.memory.favoriteFood.isBlank()
-        ) {
-            askFavoriteFoodQuestion()
         }
     }
 
@@ -208,6 +230,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val lastChoice = _uiState.value.memory.lastChoice
         val favoriteDate = _uiState.value.memory.favoriteDate
         val favoriteFood = _uiState.value.memory.favoriteFood
+        val favoriteTime = _uiState.value.memory.favoriteTime
 
         return when {
             affection < 10 -> {
@@ -228,10 +251,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             affection < 25 -> {
                 when (option.text) {
                     "I wanted to see you." -> {
-                        if (favoriteFood.isNotBlank()) {
-                            "I'm glad you came back… maybe we can share some $favoriteFood together someday."
-                        } else {
-                            "I'm glad you came back tonight."
+                        when {
+                            favoriteTime == "Night 🌙" ->
+                                "I'm glad you came back... nights feel calmer when you're here."
+                            favoriteTime == "Rain 🌧️" ->
+                                "I'm glad you came back... rainy moments always feel more emotional somehow."
+                            favoriteTime == "Sunset 🌆" ->
+                                "I'm glad you came back... sunset always feels gentle to me."
+                            favoriteFood.isNotBlank() ->
+                                "I'm glad you came back… maybe we can share some $favoriteFood together someday."
+                            else ->
+                                "I'm glad you came back tonight."
                         }
                     }
 
@@ -265,12 +295,27 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
-    fun askFavoriteDateQuestion() {
+    fun askFavoriteDateQuestion(intro: String? = null) {
         _uiState.update { current ->
+            val dayIntro = intro ?: current.currentMessage
+            val baseMessages = if (intro != null) {
+                listOf(ChatMessage(text = dayIntro, isFromUser = false))
+            } else {
+                current.messages
+            }
             current.copy(
+                day = if (intro != null) current.day + 1 else current.day,
+                currentMessage = dayIntro,
+                latestResponse = if (intro != null) "" else current.latestResponse,
+                sessionEnded = if (intro != null) false else current.sessionEnded,
+                isTyping = if (intro != null) false else current.isTyping,
                 showDateQuestion = true,
                 dateOptions = listOf("Night walk", "Cafe date", "Movie night"),
-                messages = current.messages + ChatMessage(
+                showFoodQuestion = false,
+                foodOptions = emptyList(),
+                showTimeQuestion = false,
+                timeOptions = emptyList(),
+                messages = baseMessages + ChatMessage(
                     text = "What kind of date would you like with me?",
                     isFromUser = false
                 )
@@ -279,32 +324,42 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteDate(date: String) {
+        val response = "Ahh... $date sounds nice. I'll remember that."
         _uiState.update { current ->
             current.copy(
                 showDateQuestion = false,
                 dateOptions = emptyList(),
-                memory = current.memory.copy(
-                    favoriteDate = date
-                ),
+                sessionEnded = true,
+                latestResponse = response,
+                memory = current.memory.copy(favoriteDate = date),
                 messages = current.messages +
-                        ChatMessage(
-                            text = date,
-                            isFromUser = true
-                        ) +
-                        ChatMessage(
-                            text = "Mm... $date sounds nice. I'll remember that.",
-                            isFromUser = false
-                        )
+                        ChatMessage(text = date, isFromUser = true) +
+                        ChatMessage(text = response, isFromUser = false)
             )
         }
     }
 
-    fun askFavoriteFoodQuestion() {
+    fun askFavoriteFoodQuestion(intro: String? = null) {
         _uiState.update { current ->
+            val dayIntro = intro ?: current.currentMessage
+            val baseMessages = if (intro != null) {
+                listOf(ChatMessage(text = dayIntro, isFromUser = false))
+            } else {
+                current.messages
+            }
             current.copy(
+                day = if (intro != null) current.day + 1 else current.day,
+                currentMessage = dayIntro,
+                latestResponse = if (intro != null) "" else current.latestResponse,
+                sessionEnded = if (intro != null) false else current.sessionEnded,
+                isTyping = if (intro != null) false else current.isTyping,
                 showFoodQuestion = true,
                 foodOptions = listOf("Bingsu 🍧", "Coffee ☕", "Cake 🍰"),
-                messages = current.messages + ChatMessage(
+                showDateQuestion = false,
+                dateOptions = emptyList(),
+                showTimeQuestion = false,
+                timeOptions = emptyList(),
+                messages = baseMessages + ChatMessage(
                     text = "What kind of dessert do you like?",
                     isFromUser = false
                 )
@@ -313,22 +368,63 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteFood(food: String) {
+        val response = "Ahh… $food sounds nice. It feels like something we could enjoy on a quiet night."
         _uiState.update { current ->
             current.copy(
                 showFoodQuestion = false,
                 foodOptions = emptyList(),
+                sessionEnded = true,
+                latestResponse = response,
+                memory = current.memory.copy(favoriteFood = food),
+                messages = current.messages +
+                        ChatMessage(text = food, isFromUser = true) +
+                        ChatMessage(text = response, isFromUser = false)
+            )
+        }
+    }
+
+    fun askFavoriteTimeQuestion(intro: String? = null) {
+        _uiState.update { current ->
+            val dayIntro = intro ?: current.currentMessage
+            val baseMessages = if (intro != null) {
+                listOf(ChatMessage(text = dayIntro, isFromUser = false))
+            } else {
+                current.messages
+            }
+            current.copy(
+                day = if (intro != null) current.day + 1 else current.day,
+                currentMessage = dayIntro,
+                latestResponse = if (intro != null) "" else current.latestResponse,
+                sessionEnded = if (intro != null) false else current.sessionEnded,
+                isTyping = if (intro != null) false else current.isTyping,
+                showTimeQuestion = true,
+                timeOptions = listOf("Night 🌙", "Rain 🌧️", "Sunset 🌆"),
+                showDateQuestion = false,
+                dateOptions = emptyList(),
+                showFoodQuestion = false,
+                foodOptions = emptyList(),
+                messages = baseMessages + ChatMessage(
+                    text = "What is your favorite time of day?",
+                    isFromUser = false
+                )
+            )
+        }
+    }
+
+    fun selectFavoriteTime(time: String) {
+        val response = "Ahh… $time. That tells me a lot about you. I'll keep that close."
+        _uiState.update { current ->
+            current.copy(
+                showTimeQuestion = false,
+                timeOptions = emptyList(),
+                sessionEnded = true,
+                latestResponse = response,
                 memory = current.memory.copy(
-                    favoriteFood = food
+                    favoriteTime = time
                 ),
                 messages = current.messages +
-                        ChatMessage(
-                            text = food,
-                            isFromUser = true
-                        ) +
-                        ChatMessage(
-                            text = "Mm… $food sounds nice. It feels like something we could enjoy on a quiet night.",
-                            isFromUser = false
-                        )
+                        ChatMessage(text = time, isFromUser = true) +
+                        ChatMessage(text = response, isFromUser = false)
             )
         }
     }

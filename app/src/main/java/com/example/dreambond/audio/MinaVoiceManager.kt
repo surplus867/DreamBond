@@ -6,7 +6,6 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import java.util.Locale
 
-
 class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = TextToSpeech(context, this)
@@ -38,11 +37,14 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
 
     fun speak(text: String) {
         if (!isReady || text.isBlank()) return
+        // Strip emoji so TTS doesn't read them aloud
+        val cleanText = text.replace(Regex("[\\p{So}\\p{Cn}\\p{Cs}\\p{Co}]+"), "").trim()
+        if (cleanText.isBlank()) return
         val params = Bundle().apply {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, softVolume)
         }
         tts?.stop()
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "mina_voice")
+        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, params, "mina_voice")
     }
 
     fun stop() {
