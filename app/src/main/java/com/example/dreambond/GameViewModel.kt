@@ -173,15 +173,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
         val defaultIntro = when {
-            shouldAskTime ->
-                "I keep thinking about what you told me... can I ask you one more thing?"
-
-            shouldAskFood ->
-                "I've been curious about you more and more... is it okay if I ask something?"
-
-            memory.favoriteDate.isBlank() ->
-                "Before tonight begins... can I ask you something?"
-
             memory.lastChoice == "I wanted to see you." ->
                 "You came back tonight... I was hoping you would."
 
@@ -190,6 +181,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
             memory.lastChoice == "I was just curious." ->
                 "You're here again... still curious about me?"
+
+            shouldAskTime ->
+                "I keep thinking about what you told me... can I ask you one more thing?"
+
+            shouldAskFood ->
+                "I've been curious about you more and more... is it okay if I ask something?"
+
+            memory.favoriteDate.isBlank() ->
+                "Before tonight begins... can I ask you something?"
 
             else ->
                 character?.introLine ?: ""
