@@ -26,6 +26,7 @@ data class GameUiState(
     val isTyping: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val memory: MinaMemory = MinaMemory(),
+    val mood: String = "Calm",
     val showDateQuestion: Boolean = false,
     val dateOptions: List<String> = emptyList(),
     val showFoodQuestion: Boolean = false,
@@ -37,6 +38,15 @@ data class GameUiState(
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
+
+    private fun getMoodFromChoice(choice: String): String {
+        return when (choice) {
+            "I wanted to see you." -> "Happy"
+            "I could not sleep." -> "Calm"
+            "I was just curious." -> "Playful"
+            else -> "Calm"
+        }
+    }
 
     val characters = listOf(
         GirlfriendCharacter(
@@ -127,6 +137,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 isTyping = true,
                 sessionEnded = false,
                 readyToEndDay = false,
+                mood = getMoodFromChoice(option.text),
                 messages = current.messages + ChatMessage(text = option.text, isFromUser = true),
                 memory = updatedMemory
             )
@@ -264,7 +275,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun getDynamicReply(option: DialogueOption): String {
-        val personalityType = getPersonalityType()
+        val mood = _uiState.value.mood
         val affection = _uiState.value.affection
         val lastChoice = _uiState.value.memory.lastChoice
         val favoriteDate = _uiState.value.memory.favoriteDate
@@ -288,10 +299,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             affection < 25 -> {
                 when (option.text) {
                     "I wanted to see you." -> {
-                        when (personalityType) {
-                            "Gentle" -> "That makes me happy... you always make this place feel warmer."
-                            "Playful" -> "You missed me that much? That's kind of cute."
-                            "Distant" -> "You say that, but you still feel a little hard to read."
+                        when (mood) {
+                            "Happy" -> "You came back... that really makes me happy."
+                            "Playful" -> "You missed me that much?"
+                            "Calm" -> "I'm glad you came back tonight."
                             else -> "I'm glad you came back tonight."
                         }
                     }
@@ -342,7 +353,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun getGoodnightMessage(): String {
         val memory = _uiState.value.memory
-        val personality = getPersonalityType()
+        val mood = _uiState.value.mood
 
         return when {
             memory.lastDateScene == "Bingsu Date 🍧" ->
@@ -354,14 +365,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             memory.favoriteTime == "Rain 🌧️" ->
                 "Goodnight... I like nights like this, soft and quiet."
 
-            personality == "Playful" ->
-                "Goodnight... don't keep me waiting too long, okay?"
-
-            personality == "Distant" ->
-                "Goodnight... I hope you come back again."
-
-            else ->
-                "Goodnight... I'll be here tomorrow."
+            else -> when (mood) {
+                "Happy" -> "Goodnight... today felt really nice."
+                "Shy" -> "Goodnight... I'll be here tomorrow."
+                "Playful" -> "Goodnight... don't forget about me."
+                else -> "Goodnight... I'll be waiting."
+            }
         }
     }
 

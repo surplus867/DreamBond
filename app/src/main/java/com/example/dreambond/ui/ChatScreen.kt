@@ -54,6 +54,7 @@ fun ChatScreen(
     affection: Int,
     relationshipLevel: String,
     personalityType: String,
+    mood: String,
     currentMessage: String,
     latestResponse: String,
     sessionEnded: Boolean,
@@ -205,6 +206,12 @@ fun ChatScreen(
                                 color = statusColor
                             )
                         }
+
+                        Text(
+                            text = "Mood: $mood",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFB8C1EC)
+                        )
 
                         HorizontalDivider(color = Color(0xFF3A4267))
 
@@ -491,6 +498,7 @@ private fun ChatScreenEndPreview() {
             affection = 10,
             relationshipLevel = "Close",
             personalityType = "Gentle",
+            mood = "Calm",
             currentMessage = "Today was really special.",
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,
