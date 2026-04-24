@@ -38,6 +38,9 @@ data class GameUiState(
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
+    private val finalSoftGoodnightLine =
+        "Goodnight... sleep softly, okay? I'll be here when you come back."
+
     val characters = listOf(
         GirlfriendCharacter(
             id = 1,
@@ -371,7 +374,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             current.copy(
                 showDateQuestion = false,
                 dateOptions = emptyList(),
+                currentMessage = response,
                 sessionEnded = true,
+                readyToEndDay = false,
                 latestResponse = response,
                 memory = current.memory.copy(favoriteDate = date),
                 messages = current.messages +
@@ -410,22 +415,39 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteFood(food: String) {
+        if (food.contains("Bingsu", ignoreCase = true)) {
+            _uiState.update { current ->
+                current.copy(
+                    showFoodQuestion = false,
+                    foodOptions = emptyList(),
+                    readyToEndDay = false,
+                    memory = current.memory.copy(favoriteFood = food),
+                    messages = current.messages +
+                            ChatMessage(text = food, isFromUser = true) +
+                            ChatMessage(
+                                text = "Mm... $food sounds nice. I'll remember that.",
+                                isFromUser = false
+                            )
+                )
+            }
+            startBingsuDateScene()
+            return
+        }
+
+        val response = "Mm... $food sounds nice. I'll remember that."
         _uiState.update { current ->
             current.copy(
                 showFoodQuestion = false,
                 foodOptions = emptyList(),
+                currentMessage = response,
+                latestResponse = response,
+                sessionEnded = true,
+                readyToEndDay = false,
                 memory = current.memory.copy(favoriteFood = food),
                 messages = current.messages +
                         ChatMessage(text = food, isFromUser = true) +
-                        ChatMessage(
-                            text = "Mm... $food sounds nice. I'll remember that.",
-                            isFromUser = false
-                        )
+                        ChatMessage(text = response, isFromUser = false)
             )
-        }
-
-        if (food.contains("Bingsu", ignoreCase = true)) {
-            startBingsuDateScene()
         }
     }
 
@@ -463,7 +485,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             current.copy(
                 showTimeQuestion = false,
                 timeOptions = emptyList(),
+                currentMessage = response,
                 sessionEnded = true,
+                readyToEndDay = false,
                 latestResponse = response,
                 memory = current.memory.copy(
                     favoriteTime = time
@@ -479,7 +503,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _uiState.update { current ->
             current.copy(
                 activeScene = "BINGSU_DATE",
+                currentMessage = "I remembered you like bingsu... do you want to go with me tonight?",
+                latestResponse = "",
                 sessionEnded = false,
+                readyToEndDay = false,
                 messages = current.messages + ChatMessage(
                     text = "I remembered you like bingsu... do you want to go with me tonight?",
                     isFromUser = false
@@ -519,24 +546,30 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 affection = current.affection + affectionGain,
                 activeScene = "",
                 sceneOptions = emptyList(),
+                currentMessage = reply,
+                latestResponse = reply,
                 sessionEnded = true,
+                readyToEndDay = false,
                 messages = current.messages +
                         ChatMessage(choice, isFromUser = true) +
                         ChatMessage(reply, isFromUser = false),
-                latestResponse = reply,
-                currentMessage = reply
             )
         }
     }
 
     fun continueAfterReply() {
         _uiState.update { current ->
+            if (!current.sessionEnded || current.readyToEndDay) {
+                return@update current
+            }
+
             current.copy(
-                currentMessage = "The night feels softer when we talk like this.",
-                latestResponse = "The night feels softer when we talk like this.",
+                currentMessage = finalSoftGoodnightLine,
+                latestResponse = finalSoftGoodnightLine,
+                sessionEnded = true,
                 readyToEndDay = true,
                 messages = current.messages + ChatMessage(
-                    text = "The night feels softer when we talk like this.",
+                    text = finalSoftGoodnightLine,
                     isFromUser = false
                 )
             )
