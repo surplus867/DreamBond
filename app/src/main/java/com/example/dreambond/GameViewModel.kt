@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 data class GameUiState(
     val selectedCharacter: GirlfriendCharacter? = null,
@@ -171,22 +172,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskFood = memory.favoriteDate.isNotBlank() && memory.favoriteFood.isBlank()
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
-        val intro = when {
-            memory.lastDateScene == "Cafe Date ☕" ->
-                "I was thinking about our cafe date... sitting together felt peaceful."
-
-            memory.lastDateScene == "Bingsu Date 🍧" ->
-                "I was thinking about last night... the bingsu felt sweeter because you were there."
-
-            memory.favoriteTime == "Night 🌙" ->
-                "The night feels calm again... I thought of you."
-
-            memory.favoriteTime == "Rain 🌧️" ->
-                "Rain always reminds me of quiet conversations like ours."
-
-            memory.favoriteTime == "Sunset 🌆" ->
-                "Sunset has such a gentle feeling... I wish you could see it with me."
-
+        val defaultIntro = when {
             shouldAskTime ->
                 "I keep thinking about what you told me... can I ask you one more thing?"
 
@@ -207,6 +193,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
             else ->
                 character?.introLine ?: ""
+        }
+
+        val recallLine = getMemoryRecallLine()
+        val intro = if (recallLine != null && !shouldAskDate && !shouldAskFood && !shouldAskTime
+            && memory.lastChoice.isBlank() && Random.nextBoolean()) {
+            recallLine
+        } else {
+            defaultIntro
         }
 
         if (shouldAskDate) {
@@ -326,6 +320,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 when (option.text) {
                     "I wanted to see you." -> "I was hoping you'd say that."
                     "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
+                    "I was just curious." -> "Still curious about me... I don't mind that at all."
                     else -> "You know... you're kind of cute when you act mysterious."
                 }
             }
@@ -334,6 +329,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 when (option.text) {
                     "I wanted to see you." -> "I missed you... I was waiting for you again."
                     "I could not sleep." -> "Then stay. Nights feel softer when you're here."
+                    "I was just curious." -> "You're here again... still curious about me?"
                     else -> "Even when you pretend otherwise, you always come back to me."
                 }
             }
@@ -664,6 +660,39 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 latestResponse = reply,
                 currentMessage = reply
             )
+        }
+    }
+
+    fun getMemoryRecallLine(): String? {
+        val memory = _uiState.value.memory
+        val personality = getPersonalityType()
+
+        return when {
+            memory.lastDateScene == "Cafe Date ☕" ->
+                "I was thinking about that quiet cafe... sitting with you felt peaceful."
+
+            memory.lastDateScene == "Bingsu Date 🍧" ->
+                "I keep thinking about our bingsu date... it felt sweeter because you were there."
+
+            memory.favoriteFood.contains("Bingsu", ignoreCase = true) ->
+                "You said you like bingsu... I still remember that."
+
+            memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
+                "You said you like coffee... maybe that suits quiet nights like this."
+
+            memory.favoriteTime == "Rain 🌧️" ->
+                "Rainy nights always remind me of soft conversations."
+
+            memory.favoriteTime == "Night 🌙" ->
+                "Nights like this feel familiar somehow."
+
+            personality == "Playful" ->
+                "You have this playful side... I notice it more than you think."
+
+            personality == "Distant" ->
+                "You still feel a little hard to read... but I want to understand you."
+
+            else -> null
         }
     }
 
