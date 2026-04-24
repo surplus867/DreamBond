@@ -172,6 +172,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
         val intro = when {
+            memory.lastDateScene == "Cafe Date ☕" ->
+                "I was thinking about our cafe date... sitting together felt peaceful."
+
             memory.lastDateScene == "Bingsu Date 🍧" ->
                 "I was thinking about last night... the bingsu felt sweeter because you were there."
 
@@ -356,6 +359,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val mood = _uiState.value.mood
 
         return when {
+            memory.lastDateScene == "Cafe Date ☕" ->
+                "Goodnight... I keep thinking about that quiet cafe with you."
+
             memory.lastDateScene == "Bingsu Date 🍧" ->
                 "Goodnight... I keep thinking about our bingsu date."
 
@@ -468,6 +474,25 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             return
         }
 
+        if (food.contains("Coffee", ignoreCase = true)) {
+            _uiState.update { current ->
+                current.copy(
+                    showFoodQuestion = false,
+                    foodOptions = emptyList(),
+                    readyToEndDay = false,
+                    memory = current.memory.copy(favoriteFood = food),
+                    messages = current.messages +
+                            ChatMessage(text = food, isFromUser = true) +
+                            ChatMessage(
+                                text = "Mm... $food sounds nice. I'll remember that.",
+                                isFromUser = false
+                            )
+                )
+            }
+            startCafeDateScene()
+            return
+        }
+
         val response = "Mm... $food sounds nice. I'll remember that."
         _uiState.update { current ->
             current.copy(
@@ -554,25 +579,73 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    fun startCafeDateScene() {
+        _uiState.update { current ->
+            current.copy(
+                activeScene = "CAFE_DATE",
+                sessionEnded = false,
+                messages = current.messages + ChatMessage(
+                    text = "I remembered you like coffee... would you like to go to a quiet cafe with me?",
+                    isFromUser = false
+                ),
+                sceneOptions = listOf(
+                    "Let's sit by the window.",
+                    "You choose the drink for me.",
+                    "Maybe just a short visit."
+                )
+            )
+        }
+    }
+
     fun chooseSceneOption(choice: String) {
-        val reply = when (choice) {
-            "Of course, let's go together." ->
-                "Then let's share one. It feels sweeter with you."
+        val currentScene = _uiState.value.activeScene
 
-            "Only if you choose the flavor." ->
-                "Then I'll choose strawberry. Dont complain later."
+        val reply = when (currentScene) {
+            "CAFE_DATE" -> when (choice) {
+                "Let's sit by the window.", "Let’s sit by the window." ->
+                    "That sounds perfect... I like watching the city lights with you."
 
-            "Maybe next time." ->
-                "Okay... maybe another night."
+                "You choose the drink for me." ->
+                    "Then I'll choose something sweet. I hope you trust my taste."
+
+                "Maybe just a short visit." ->
+                    "That's okay... even a short time with you is enough."
+
+                else -> "..."
+            }
+
+            "BINGSU_DATE" -> when (choice) {
+                "Of course, let's go together.", "Of course, let’s go together." ->
+                    "Then let's share one. It feels sweeter with you."
+
+                "Only if you choose the flavor." ->
+                    "Then I'll choose strawberry. Don't complain later."
+
+                "Maybe next time." ->
+                    "Okay... maybe another night."
+
+                else -> "..."
+            }
 
             else -> "..."
         }
 
         val affectionGain = when (choice) {
-            "Of course, let's go together." -> 4
+            "Let's sit by the window.", "Let’s sit by the window." -> 4
+            "You choose the drink for me." -> 3
+            "Maybe just a short visit." -> 1
+
+            "Of course, let's go together.", "Of course, let’s go together." -> 4
             "Only if you choose the flavor." -> 3
             "Maybe next time." -> 0
+
             else -> 0
+        }
+
+        val sceneName = when (currentScene) {
+            "CAFE_DATE" -> "Cafe Date ☕"
+            "BINGSU_DATE" -> "Bingsu Date 🍧"
+            else -> ""
         }
 
         _uiState.update { current ->
@@ -583,7 +656,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 sessionEnded = true,
                 readyToEndDay = false,
                 memory = current.memory.copy(
-                    lastDateScene = "Bingsu Date 🍧"
+                    lastDateScene = sceneName
                 ),
                 messages = current.messages +
                         ChatMessage(choice, isFromUser = true) +
