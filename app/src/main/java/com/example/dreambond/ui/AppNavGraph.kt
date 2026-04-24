@@ -52,6 +52,7 @@ fun AppNavGraph(
                 character = uiState.selectedCharacter,
                 affection = uiState.affection,
                 relationshipLevel = gameViewModel.getRelationShipLevel(),
+                personalityType = gameViewModel.getPersonalityType(),
                 currentMessage = uiState.currentMessage,
                 latestResponse = uiState.latestResponse,
                 sessionEnded = uiState.sessionEnded,

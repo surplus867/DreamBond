@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ThreadLocalRandom.current
 
 data class GameUiState(
     val selectedCharacter: GirlfriendCharacter? = null,
@@ -99,11 +100,32 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         // User message + start typing
         _uiState.update { current ->
+            val updatedMemory = when (option.text) {
+                "I wanted to see you." -> current.memory.copy(
+                    lastChoice = option.text,
+                    gentlePoints = current.memory.gentlePoints + 1
+                )
+
+                "I could not sleep." -> current.memory.copy(
+                    lastChoice = option.text,
+                    gentlePoints = current.memory.gentlePoints + 1
+                )
+
+                "I was just curious." -> current.memory.copy(
+                    lastChoice = option.text,
+                    distantPoints = current.memory.distantPoints + 1
+                )
+
+                else -> current.memory.copy(
+                    lastChoice = option.text
+                )
+            }
+
             current.copy(
                 isTyping = true,
                 sessionEnded = false,
                 messages = current.messages + ChatMessage(text = option.text, isFromUser = true),
-                memory = current.memory.copy(lastChoice = option.text)
+                memory = updatedMemory
             )
         }
 
@@ -226,11 +248,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun getDynamicReply(option: DialogueOption): String {
+        val personalityType = getPersonalityType()
         val affection = _uiState.value.affection
         val lastChoice = _uiState.value.memory.lastChoice
         val favoriteDate = _uiState.value.memory.favoriteDate
-        val favoriteFood = _uiState.value.memory.favoriteFood
-        val favoriteTime = _uiState.value.memory.favoriteTime
 
         return when {
             affection < 10 -> {
@@ -251,17 +272,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             affection < 25 -> {
                 when (option.text) {
                     "I wanted to see you." -> {
-                        when {
-                            favoriteTime == "Night 🌙" ->
-                                "I'm glad you came back... nights feel calmer when you're here."
-                            favoriteTime == "Rain 🌧️" ->
-                                "I'm glad you came back... rainy moments always feel more emotional somehow."
-                            favoriteTime == "Sunset 🌆" ->
-                                "I'm glad you came back... sunset always feels gentle to me."
-                            favoriteFood.isNotBlank() ->
-                                "I'm glad you came back… maybe we can share some $favoriteFood together someday."
-                            else ->
-                                "I'm glad you came back tonight."
+                        when (personalityType) {
+                            "Gentle" -> "That makes me happy... you always make this place feel warmer."
+                            "Playful" -> "You missed me that much? That's kind of cute."
+                            "Distant" -> "You say that, but you still feel a little hard to read."
+                            else -> "I'm glad you came back tonight."
                         }
                     }
 
@@ -292,6 +307,20 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     else -> "Even when you pretend otherwise, you always come back to me."
                 }
             }
+        }
+    }
+
+    fun getPersonalityType(): String {
+        val memory = _uiState.value.memory
+
+        return when {
+            memory.playfulPoints > memory.gentlePoints &&
+                    memory.playfulPoints > memory.distantPoints -> "Playful"
+
+            memory.distantPoints > memory.gentlePoints &&
+                    memory.distantPoints > memory.playfulPoints -> "Distant"
+
+            else -> "Gentle"
         }
     }
 

@@ -53,6 +53,7 @@ fun ChatScreen(
     character: GirlfriendCharacter?,
     affection: Int,
     relationshipLevel: String,
+    personalityType: String,
     currentMessage: String,
     latestResponse: String,
     sessionEnded: Boolean,
@@ -180,6 +181,12 @@ fun ChatScreen(
                         }
 
                         HorizontalDivider(color = Color(0xFF3A4267))
+
+                        Text(
+                            text = "Mina adapts to you:  $personalityType",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFB8C1EC)
+                        )
 
                         Text(
                             text = getMoodText(relationshipLevel),
@@ -445,6 +452,7 @@ private fun ChatScreenEndPreview() {
             character = sampleCharacter,
             affection = 10,
             relationshipLevel = "Close",
+            personalityType = "Gentle",
             currentMessage = "Today was really special.",
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,
