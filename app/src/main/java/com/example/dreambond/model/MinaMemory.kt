@@ -5,6 +5,7 @@ data class MinaMemory(
     val favoriteDate: String = "",
     val favoriteFood: String = "",
     val favoriteTime: String = "",
+    val lastDateScene: String = "",
     val gentlePoints: Int = 0,
     val playfulPoints: Int = 0,
     val distantPoints: Int = 0

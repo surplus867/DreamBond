@@ -38,9 +38,6 @@ data class GameUiState(
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
-    private val finalSoftGoodnightLine =
-        "Goodnight... sleep softly, okay? I'll be here when you come back."
-
     val characters = listOf(
         GirlfriendCharacter(
             id = 1,
@@ -164,11 +161,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
         val intro = when {
+            memory.lastDateScene == "Bingsu Date 🍧" ->
+                "I was thinking about last night... the bingsu felt sweeter because you were there."
+
             memory.favoriteTime == "Night 🌙" ->
-                "The night feels especially quiet today... I thought of you."
+                "The night feels calm again... I thought of you."
 
             memory.favoriteTime == "Rain 🌧️" ->
-                "Something about soft rain always makes me think of warm conversations."
+                "Rain always reminds me of quiet conversations like ours."
 
             memory.favoriteTime == "Sunset 🌆" ->
                 "Sunset has such a gentle feeling... I wish you could see it with me."
@@ -337,6 +337,31 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     memory.distantPoints > memory.playfulPoints -> "Distant"
 
             else -> "Gentle"
+        }
+    }
+
+    fun getGoodnightMessage(): String {
+        val memory = _uiState.value.memory
+        val personality = getPersonalityType()
+
+        return when {
+            memory.lastDateScene == "Bingsu Date 🍧" ->
+                "Goodnight... I keep thinking about our bingsu date."
+
+            memory.favoriteFood.contains("Coffee", true) ->
+                "Goodnight... maybe next time we can sit somewhere quiet with coffee."
+
+            memory.favoriteTime == "Rain 🌧️" ->
+                "Goodnight... I like nights like this, soft and quiet."
+
+            personality == "Playful" ->
+                "Goodnight... don't keep me waiting too long, okay?"
+
+            personality == "Distant" ->
+                "Goodnight... I hope you come back again."
+
+            else ->
+                "Goodnight... I'll be here tomorrow."
         }
     }
 
@@ -546,30 +571,34 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 affection = current.affection + affectionGain,
                 activeScene = "",
                 sceneOptions = emptyList(),
-                currentMessage = reply,
-                latestResponse = reply,
                 sessionEnded = true,
                 readyToEndDay = false,
+                memory = current.memory.copy(
+                    lastDateScene = "Bingsu Date 🍧"
+                ),
                 messages = current.messages +
                         ChatMessage(choice, isFromUser = true) +
                         ChatMessage(reply, isFromUser = false),
+                latestResponse = reply,
+                currentMessage = reply
             )
         }
     }
 
     fun continueAfterReply() {
+        val finalLine = getGoodnightMessage()
+
         _uiState.update { current ->
             if (!current.sessionEnded || current.readyToEndDay) {
                 return@update current
             }
 
             current.copy(
-                currentMessage = finalSoftGoodnightLine,
-                latestResponse = finalSoftGoodnightLine,
-                sessionEnded = true,
                 readyToEndDay = true,
+                latestResponse = finalLine,
+                currentMessage = finalLine,
                 messages = current.messages + ChatMessage(
-                    text = finalSoftGoodnightLine,
+                    text = finalLine,
                     isFromUser = false
                 )
             )
