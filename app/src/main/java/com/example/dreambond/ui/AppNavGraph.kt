@@ -56,6 +56,7 @@ fun AppNavGraph(
                 currentMessage = uiState.currentMessage,
                 latestResponse = uiState.latestResponse,
                 sessionEnded = uiState.sessionEnded,
+                readyToEndDay = uiState.readyToEndDay,
                 isTyping = uiState.isTyping,
                 messages = uiState.messages,
                 options = gameViewModel.dialogueOptions,
@@ -65,6 +66,8 @@ fun AppNavGraph(
                 foodOptions = uiState.foodOptions,
                 showTimeQuestion = uiState.showTimeQuestion,
                 timeOptions = uiState.timeOptions,
+                activeScene = uiState.activeScene,
+                sceneOptions = uiState.sceneOptions,
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)
                 },
@@ -76,6 +79,12 @@ fun AppNavGraph(
                 },
                 onSelectFavoriteTime = { time ->
                     gameViewModel.selectFavoriteTime(time)
+                },
+                onChooseSceneOption = { choice ->
+                    gameViewModel.chooseSceneOption(choice)
+                },
+                onContinueAfterReply = {
+                    gameViewModel.continueAfterReply()
                 },
                 onSpeakLatestResponse = minaVoiceManager::speak,
                 onEndDay = {

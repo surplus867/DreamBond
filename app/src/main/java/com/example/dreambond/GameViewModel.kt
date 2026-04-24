@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.concurrent.ThreadLocalRandom.current
 
 data class GameUiState(
     val selectedCharacter: GirlfriendCharacter? = null,
@@ -23,6 +22,7 @@ data class GameUiState(
     val latestResponse: String = "",
     val day: Int = 1,
     val sessionEnded: Boolean = false,
+    val readyToEndDay: Boolean = false,
     val isTyping: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val memory: MinaMemory = MinaMemory(),
@@ -31,7 +31,9 @@ data class GameUiState(
     val showFoodQuestion: Boolean = false,
     val foodOptions: List<String> = emptyList(),
     val showTimeQuestion: Boolean = false,
-    val timeOptions: List<String> = emptyList()
+    val timeOptions: List<String> = emptyList(),
+    val activeScene: String = "",
+    val sceneOptions: List<String> = emptyList()
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -124,6 +126,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             current.copy(
                 isTyping = true,
                 sessionEnded = false,
+                readyToEndDay = false,
                 messages = current.messages + ChatMessage(text = option.text, isFromUser = true),
                 memory = updatedMemory
             )
@@ -138,6 +141,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     currentMessage = dynamicReply,
                     latestResponse = dynamicReply,
                     sessionEnded = true,
+                    readyToEndDay = false,
                     isTyping = false,
                     messages = current.messages + ChatMessage(
                         text = dynamicReply,
@@ -159,22 +163,31 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val intro = when {
             memory.favoriteTime == "Night 🌙" ->
                 "The night feels especially quiet today... I thought of you."
+
             memory.favoriteTime == "Rain 🌧️" ->
                 "Something about soft rain always makes me think of warm conversations."
+
             memory.favoriteTime == "Sunset 🌆" ->
                 "Sunset has such a gentle feeling... I wish you could see it with me."
+
             shouldAskTime ->
                 "I keep thinking about what you told me... can I ask you one more thing?"
+
             shouldAskFood ->
                 "I've been curious about you more and more... is it okay if I ask something?"
+
             memory.favoriteDate.isBlank() ->
                 "Before tonight begins... can I ask you something?"
+
             memory.lastChoice == "I wanted to see you." ->
                 "You came back tonight... I was hoping you would."
+
             memory.lastChoice == "I could not sleep." ->
                 "Another quiet night... are you having trouble sleeping again?"
+
             memory.lastChoice == "I was just curious." ->
                 "You're here again... still curious about me?"
+
             else ->
                 character?.introLine ?: ""
         }
@@ -397,18 +410,22 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteFood(food: String) {
-        val response = "Ahh… $food sounds nice. It feels like something we could enjoy on a quiet night."
         _uiState.update { current ->
             current.copy(
                 showFoodQuestion = false,
                 foodOptions = emptyList(),
-                sessionEnded = true,
-                latestResponse = response,
                 memory = current.memory.copy(favoriteFood = food),
                 messages = current.messages +
                         ChatMessage(text = food, isFromUser = true) +
-                        ChatMessage(text = response, isFromUser = false)
+                        ChatMessage(
+                            text = "Mm... $food sounds nice. I'll remember that.",
+                            isFromUser = false
+                        )
             )
+        }
+
+        if (food.contains("Bingsu", ignoreCase = true)) {
+            startBingsuDateScene()
         }
     }
 
@@ -454,6 +471,74 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 messages = current.messages +
                         ChatMessage(text = time, isFromUser = true) +
                         ChatMessage(text = response, isFromUser = false)
+            )
+        }
+    }
+
+    fun startBingsuDateScene() {
+        _uiState.update { current ->
+            current.copy(
+                activeScene = "BINGSU_DATE",
+                sessionEnded = false,
+                messages = current.messages + ChatMessage(
+                    text = "I remembered you like bingsu... do you want to go with me tonight?",
+                    isFromUser = false
+                ),
+                sceneOptions = listOf(
+                    "Of course, let's go together.",
+                    "Only if you choose the flavor.",
+                    "Maybe next time."
+                )
+            )
+        }
+    }
+
+    fun chooseSceneOption(choice: String) {
+        val reply = when (choice) {
+            "Of course, let's go together." ->
+                "Then let's share one. It feels sweeter with you."
+
+            "Only if you choose the flavor." ->
+                "Then I'll choose strawberry. Dont complain later."
+
+            "Maybe next time." ->
+                "Okay... maybe another night."
+
+            else -> "..."
+        }
+
+        val affectionGain = when (choice) {
+            "Of course, let's go together." -> 4
+            "Only if you choose the flavor." -> 3
+            "Maybe next time." -> 0
+            else -> 0
+        }
+
+        _uiState.update { current ->
+            current.copy(
+                affection = current.affection + affectionGain,
+                activeScene = "",
+                sceneOptions = emptyList(),
+                sessionEnded = true,
+                messages = current.messages +
+                        ChatMessage(choice, isFromUser = true) +
+                        ChatMessage(reply, isFromUser = false),
+                latestResponse = reply,
+                currentMessage = reply
+            )
+        }
+    }
+
+    fun continueAfterReply() {
+        _uiState.update { current ->
+            current.copy(
+                currentMessage = "The night feels softer when we talk like this.",
+                latestResponse = "The night feels softer when we talk like this.",
+                readyToEndDay = true,
+                messages = current.messages + ChatMessage(
+                    text = "The night feels softer when we talk like this.",
+                    isFromUser = false
+                )
             )
         }
     }

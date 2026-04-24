@@ -57,6 +57,7 @@ fun ChatScreen(
     currentMessage: String,
     latestResponse: String,
     sessionEnded: Boolean,
+    readyToEndDay: Boolean,
     isTyping: Boolean,
     messages: List<ChatMessage>,
     options: List<DialogueOption>,
@@ -66,10 +67,14 @@ fun ChatScreen(
     foodOptions: List<String>,
     showTimeQuestion: Boolean,
     timeOptions: List<String>,
+    activeScene: String,
+    sceneOptions: List<String>,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
     onSelectFavoriteFood: (String) -> Unit,
     onSelectFavoriteTime: (String) -> Unit,
+    onChooseSceneOption: (String) -> Unit,
+    onContinueAfterReply: () -> Unit,
     onEndDay: () -> Unit,
     onSpeakLatestResponse: (String) -> Unit
 ) {
@@ -103,7 +108,28 @@ fun ChatScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         bottomBar = {
-            if (sessionEnded && !isTyping) {
+            if (sessionEnded && !isTyping && !readyToEndDay) {
+                Surface(color = Color.Transparent) {
+                    Button(
+                        onClick = onContinueAfterReply,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE91E63),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "Continue",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            } else if (sessionEnded && !isTyping) {
                 Surface(color = Color.Transparent) {
                     Button(
                         onClick = onEndDay,
@@ -118,7 +144,7 @@ fun ChatScreen(
                         )
                     ) {
                         Text(
-                            text = "End Day 🌙",
+                            text = "Say Goodnight 🌙",
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
@@ -323,6 +349,18 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     when {
+                        activeScene.isNotBlank() -> {
+                            sceneOptions.forEach { choice ->
+                                Button(
+                                    onClick = { onChooseSceneOption(choice) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(choice)
+                                }
+                            }
+                        }
+
                         showDateQuestion -> {
                             dateOptions.forEach { date ->
                                 Button(
@@ -456,6 +494,7 @@ private fun ChatScreenEndPreview() {
             currentMessage = "Today was really special.",
             latestResponse = "I had so much fun talking with you.",
             sessionEnded = true,
+            readyToEndDay = false,
             isTyping = false,
             messages = listOf(
                 ChatMessage(text = "Hi, I have been waiting for you.", isFromUser = false),
@@ -468,10 +507,14 @@ private fun ChatScreenEndPreview() {
             foodOptions = emptyList(),
             showTimeQuestion = false,
             timeOptions = emptyList(),
+            activeScene = "",
+            sceneOptions = emptyList(),
             onChooseReply = {},
             onSelectFavoriteDate = {},
             onSelectFavoriteFood = {},
             onSelectFavoriteTime = {},
+            onChooseSceneOption = {},
+            onContinueAfterReply = {},
             onEndDay = {},
             onSpeakLatestResponse = {}
         )
