@@ -1,0 +1,14 @@
+<changelist name="Uncommitted_changes_before_rebase_[Changes]" date="1775087877059" recycled="false" toDelete="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_rebase_[Changes]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before rebase [Changes]" />
+  <binary>
+    <option name="BEFORE_PATH" value=".idea/firebender/chat_history.db-shm" />
+    <option name="AFTER_PATH" value=".idea/firebender/chat_history.db-shm" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_rebase_[Changes]/chat_history.db-shm" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".idea/firebender/chat_history.db-wal" />
+    <option name="AFTER_PATH" value=".idea/firebender/chat_history.db-wal" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_rebase_[Changes]/chat_history.db-wal" />
+  </binary>
+</changelist>

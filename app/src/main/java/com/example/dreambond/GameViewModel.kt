@@ -19,6 +19,7 @@ import kotlin.random.Random
 data class GameUiState(
     val selectedCharacter: GirlfriendCharacter? = null,
     val affection: Int = 0,
+    val sceneStep: Int = 0,
     val currentMessage: String = "",
     val latestResponse: String = "",
     val day: Int = 1,
@@ -581,6 +582,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _uiState.update { current ->
             current.copy(
                 activeScene = "CAFE_DATE",
+                sceneStep = 1,
                 sessionEnded = false,
                 messages = current.messages + ChatMessage(
                     text = "I remembered you like coffee... would you like to go to a quiet cafe with me?",
@@ -588,8 +590,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 ),
                 sceneOptions = listOf(
                     "Let's sit by the window.",
-                    "You choose the drink for me.",
-                    "Maybe just a short visit."
+                    "Let's sit in the quiet corner."
                 )
             )
         }
@@ -597,23 +598,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun chooseSceneOption(choice: String) {
         val currentScene = _uiState.value.activeScene
+        val currentStep = _uiState.value.sceneStep
+
+        if (currentScene == "CAFE_DATE") {
+            handleCafeDateChoice(choice, currentStep)
+            return
+        }
 
         val reply = when (currentScene) {
-            "CAFE_DATE" -> when (choice) {
-                "Let's sit by the window.", "Let’s sit by the window." ->
-                    "That sounds perfect... I like watching the city lights with you."
-
-                "You choose the drink for me." ->
-                    "Then I'll choose something sweet. I hope you trust my taste."
-
-                "Maybe just a short visit." ->
-                    "That's okay... even a short time with you is enough."
-
-                else -> "..."
-            }
 
             "BINGSU_DATE" -> when (choice) {
-                "Of course, let's go together.", "Of course, let’s go together." ->
+                "Of course, let's go together." ->
                     "Then let's share one. It feels sweeter with you."
 
                 "Only if you choose the flavor." ->
@@ -629,19 +624,13 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
 
         val affectionGain = when (choice) {
-            "Let's sit by the window.", "Let’s sit by the window." -> 4
-            "You choose the drink for me." -> 3
-            "Maybe just a short visit." -> 1
-
-            "Of course, let's go together.", "Of course, let’s go together." -> 4
+            "Of course, let's go together." -> 4
             "Only if you choose the flavor." -> 3
             "Maybe next time." -> 0
-
             else -> 0
         }
 
         val sceneName = when (currentScene) {
-            "CAFE_DATE" -> "Cafe Date ☕"
             "BINGSU_DATE" -> "Bingsu Date 🍧"
             else -> ""
         }
@@ -662,6 +651,84 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 latestResponse = reply,
                 currentMessage = reply
             )
+        }
+    }
+
+    private fun handleCafeDateChoice(choice: String, step: Int) {
+        when (step) {
+            1 -> {
+                val reply = when (choice) {
+                    "Let's sit by the window." ->
+                        "I like that... we can watch the city lights together."
+
+                    "Let's sit in the quiet corner." ->
+                        "That sounds peaceful... just us, away from everyone else."
+
+                    else -> "..."
+                }
+
+                _uiState.update { current ->
+                    current.copy(
+                        sceneStep = 2,
+                        messages = current.messages +
+                                ChatMessage(choice, isFromUser = true) +
+                                ChatMessage(reply, isFromUser = false) +
+                                ChatMessage(
+                                    text = "What should we order?",
+                                    isFromUser = false
+                                ),
+                        sceneOptions = listOf(
+                            "Something sweet.",
+                            "Something warm.",
+                            "You choose for me."
+                        )
+                    )
+                }
+            }
+
+            2 -> {
+                val reply = when (choice) {
+                    "Something sweet." ->
+                        "Then maybe a sweet latte... it suits this moment."
+
+                    "Something warm." ->
+                        "Warm drinks make quiet nights feel softer."
+
+                    "You choose for me." ->
+                        "Then I'll choose something gentle for you."
+
+                    else -> "..."
+                }
+
+                val affectionGain = when (choice) {
+                    "Something sweet." -> 3
+                    "Something warm." -> 3
+                    "You choose for me." -> 4
+                    else -> 1
+                }
+
+                _uiState.update { current ->
+                    current.copy(
+                        affection = current.affection + affectionGain,
+                        activeScene = "",
+                        sceneStep = 0,
+                        sceneOptions = emptyList(),
+                        sessionEnded = true,
+                        memory = current.memory.copy(
+                            lastDateScene = "Cafe Date ☕"
+                        ),
+                        messages = current.messages +
+                                ChatMessage(choice, isFromUser = true) +
+                                ChatMessage(reply, isFromUser = false) +
+                                ChatMessage(
+                                    text = "I liked this cafe date... it felt calm being here with you.",
+                                    isFromUser = false
+                                ),
+                        latestResponse = reply,
+                        currentMessage = reply
+                    )
+                }
+            }
         }
     }
 
