@@ -598,7 +598,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     messages = current.messages +
                             ChatMessage(text = food, isFromUser = true) +
                             ChatMessage(
-                                text = "Mm... $food sounds nice. I'll remember that.",
+                                text = "Ahh... $food sounds nice. I'll remember that.",
                                 isFromUser = false
                             )
                 )
@@ -617,7 +617,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     messages = current.messages +
                             ChatMessage(text = food, isFromUser = true) +
                             ChatMessage(
-                                text = "Mm... $food sounds nice. I'll remember that.",
+                                text = "Ahh... $food sounds nice. I'll remember that.",
                                 isFromUser = false
                             )
                 )
@@ -626,7 +626,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             return
         }
 
-        val response = "Mm... $food sounds nice. I'll remember that."
+        val response = "Ahh... $food sounds nice. I'll remember that."
         _uiState.update { current ->
             current.copy(
                 showFoodQuestion = false,
