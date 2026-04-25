@@ -31,6 +31,7 @@ data class GameUiState(
     val messages: List<ChatMessage> = emptyList(),
     val memory: MinaMemory = MinaMemory(),
     val mood: String = "Calm",
+    val moodIntensity: Int = 0,
     val showDateQuestion: Boolean = false,
     val dateOptions: List<String> = emptyList(),
     val showFoodQuestion: Boolean = false,
@@ -151,6 +152,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 sessionEnded = false,
                 readyToEndDay = false,
                 mood = getMoodFromChoice(option.text),
+                moodIntensity = 3,
                 messages = current.messages + ChatMessage(text = option.text, isFromUser = true),
                 memory = updatedMemory
             )
@@ -191,9 +193,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskFood = memory.favoriteDate.isNotBlank() && memory.favoriteFood.isBlank()
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
+        val currentIntensity = _uiState.value.moodIntensity
+        val newIntensity = (currentIntensity - 1).coerceAtLeast(0)
+        val newMood = if (newIntensity == 0) "Calm" else _uiState.value.mood
+
         val defaultIntro = when {
-            memory.lastChoice == "I wanted to see you." ->
-                "You came back tonight... I was hoping you would."
+            memory.lastChoice == "I wanted to see you." -> {
+                if (currentIntensity >= 2) {
+                    "You came back tonight... I was really hoping you would."
+                } else {
+                    "You came back tonight... I was hoping you would."
+                }
+            }
 
             memory.lastChoice == "I could not sleep." ->
                 "Another quiet night... are you having trouble sleeping again?"
@@ -251,7 +262,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 showFoodQuestion = false,
                 foodOptions = emptyList(),
                 showTimeQuestion = false,
-                timeOptions = emptyList()
+                timeOptions = emptyList(),
+                mood = newMood,
+                moodIntensity = newIntensity
             )
         }
     }
@@ -297,9 +310,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
-    // Generates Mina's reply based on affection, mood, and memory.
+    // Generates Mina's reply based on affection, mood, moodIntensity, and memory.
+    // moodIntensity varies from 0 to 3, with higher values making replies more emotionally expressive.
     fun getDynamicReply(option: DialogueOption): String {
         val mood = _uiState.value.mood
+        val moodIntensity = _uiState.value.moodIntensity
         val affection = _uiState.value.affection
         val lastChoice = _uiState.value.memory.lastChoice
         val favoriteDate = _uiState.value.memory.favoriteDate
@@ -323,10 +338,19 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             affection < 25 -> {
                 when (option.text) {
                     "I wanted to see you." -> {
-                        when (mood) {
-                            "Happy" -> "You came back... that really makes me happy."
-                            "Playful" -> "You missed me that much?"
-                            "Calm" -> "I'm glad you came back tonight."
+                        when {
+                            mood == "Happy" && moodIntensity >= 2 ->
+                                "You came back... that really makes me happy."
+
+                            mood == "Happy" ->
+                                "I'm glad you came back."
+
+                            mood == "Playful" && moodIntensity >= 2 ->
+                                "You missed me that much? ...I like that."
+
+                            mood == "Playful" ->
+                                "You missed me that much?"
+
                             else -> "I'm glad you came back tonight."
                         }
                     }
@@ -345,19 +369,60 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
             affection < 50 -> {
                 when (option.text) {
-                    "I wanted to see you." -> "I was hoping you'd say that."
-                    "I could not sleep." -> "Then don't rush off yet. I like these quiet moments with you."
-                    "I was just curious." -> "Still curious about me... I don't mind that at all."
+                    "I wanted to see you." -> {
+                        if (moodIntensity >= 2) {
+                            "I was hoping you'd say that... I really was."
+                        } else {
+                            "I was hoping you'd say that."
+                        }
+                    }
+
+                    "I could not sleep." -> {
+                        if (moodIntensity >= 2) {
+                            "Then don't rush off yet... I like these quiet moments with you."
+                        } else {
+                            "Then don't rush off yet. I like these quiet moments with you."
+                        }
+                    }
+
+                    "I was just curious." -> {
+                        if (mood == "Playful" && moodIntensity >= 2) {
+                            "Still curious about me? ...I find that cute."
+                        } else {
+                            "Still curious about me... I don't mind that at all."
+                        }
+                    }
+
                     else -> "You know... you're kind of cute when you act mysterious."
                 }
             }
 
             else -> {
                 when (option.text) {
-                    "I wanted to see you." -> "I missed you... I was waiting for you again."
-                    "I could not sleep." -> "Then stay. Nights feel softer when you're here."
+                    "I wanted to see you." -> {
+                        if (moodIntensity >= 2) {
+                            "I missed you... I was waiting for you again. I always do."
+                        } else {
+                            "I missed you... I was waiting for you again."
+                        }
+                    }
+
+                    "I could not sleep." -> {
+                        if (moodIntensity >= 2) {
+                            "Then stay. Nights feel softer when you're here... I don't want you to leave."
+                        } else {
+                            "Then stay. Nights feel softer when you're here."
+                        }
+                    }
+
                     "I was just curious." -> "You're here again... still curious about me?"
-                    else -> "Even when you pretend otherwise, you always come back to me."
+                    else -> {
+                        if (moodIntensity >= 2) {
+                            "Even when you pretend otherwise, you always come back to me. That makes me happy."
+                        } else {
+                            "Even when you pretend otherwise, you always come back to me."
+                        }
+                    }
                 }
             }
         }
@@ -378,28 +443,57 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
-    // Creates a personalized goodnight message based on scene, food, time, and mood.
+    // Creates a personalized goodnight message based on scene, food, time, mood, and moodIntensity.
+    // Higher intensity makes the message more emotionally expressive.
     fun getGoodnightMessage(): String {
         val memory = _uiState.value.memory
         val mood = _uiState.value.mood
+        val moodIntensity = _uiState.value.moodIntensity
 
         return when {
-            memory.lastDateScene == "Cafe Date ☕" ->
-                "Goodnight... I keep thinking about that quiet cafe with you."
+            memory.lastDateScene == "Cafe Date ☕" -> {
+                if (moodIntensity >= 2) {
+                    "Goodnight... I can't stop thinking about that quiet cafe with you."
+                } else {
+                    "Goodnight... I keep thinking about that quiet cafe with you."
+                }
+            }
 
-            memory.lastDateScene == "Bingsu Date 🍧" ->
-                "Goodnight... I keep thinking about our bingsu date."
+            memory.lastDateScene == "Bingsu Date 🍧" -> {
+                if (moodIntensity >= 2) {
+                    "Goodnight... I'm still smiling about our bingsu date."
+                } else {
+                    "Goodnight... I keep thinking about our bingsu date."
+                }
+            }
 
-            memory.favoriteFood.contains("Coffee", true) ->
-                "Goodnight... maybe next time we can sit somewhere quiet with coffee."
+            memory.favoriteFood.contains("Coffee", true) -> {
+                if (moodIntensity >= 2) {
+                    "Goodnight... I really want to sit somewhere quiet with you over coffee."
+                } else {
+                    "Goodnight... maybe next time we can sit somewhere quiet with coffee."
+                }
+            }
 
             memory.favoriteTime == "Rain 🌧️" ->
                 "Goodnight... I like nights like this, soft and quiet."
 
             else -> when (mood) {
-                "Happy" -> "Goodnight... today felt really nice."
+                "Happy" -> {
+                    if (moodIntensity >= 2) {
+                        "Goodnight... today felt amazing with you."
+                    } else {
+                        "Goodnight... today felt really nice."
+                    }
+                }
                 "Shy" -> "Goodnight... I'll be here tomorrow."
-                "Playful" -> "Goodnight... don't forget about me."
+                "Playful" -> {
+                    if (moodIntensity >= 2) {
+                        "Goodnight... don't forget about me, okay?"
+                    } else {
+                        "Goodnight... don't forget about me."
+                    }
+                }
                 else -> "Goodnight... I'll be waiting."
             }
         }
@@ -785,17 +879,28 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
-    // Mina recalls saved memories naturally on a new day.
+    // Mina recalls saved memories naturally on a new day, with intensity making them feel more fresh.
     fun getMemoryRecallLine(): String? {
         val memory = _uiState.value.memory
         val personality = getPersonalityType()
+        val moodIntensity = _uiState.value.moodIntensity
 
         return when {
-            memory.lastDateScene == "Cafe Date ☕" ->
-                "I was thinking about that quiet cafe... sitting with you felt peaceful."
+            memory.lastDateScene == "Cafe Date ☕" -> {
+                if (moodIntensity >= 2) {
+                    "I can't stop replaying that quiet cafe... sitting with you felt so peaceful."
+                } else {
+                    "I was thinking about that quiet cafe... sitting with you felt peaceful."
+                }
+            }
 
-            memory.lastDateScene == "Bingsu Date 🍧" ->
-                "I keep thinking about our bingsu date... it felt sweeter because you were there."
+            memory.lastDateScene == "Bingsu Date 🍧" -> {
+                if (moodIntensity >= 2) {
+                    "I keep reliving our bingsu date... it felt so much sweeter because you were there."
+                } else {
+                    "I keep thinking about our bingsu date... it felt sweeter because you were there."
+                }
+            }
 
             memory.favoriteFood.contains("Bingsu", ignoreCase = true) ->
                 "You said you like bingsu... I still remember that."
@@ -819,18 +924,29 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
-    // Mina sometimes starts the conversation herself.
+    // Mina sometimes starts the conversation herself, with intensity affecting how eager she seems.
     fun getMinaInitiatedLine(): String? {
         val memory = _uiState.value.memory
         val personality = getPersonalityType()
         val mood = _uiState.value.mood
+        val moodIntensity = _uiState.value.moodIntensity
 
         return when {
-            memory.lastDateScene == "Cafe Date ☕" ->
-                "I was thinking about that cafe again... it felt peaceful being there with you."
+            memory.lastDateScene == "Cafe Date ☕" -> {
+                if (moodIntensity >= 2) {
+                    "I can't stop thinking about that cafe... being there with you was so peaceful."
+                } else {
+                    "I was thinking about that cafe again... it felt peaceful being there with you."
+                }
+            }
 
-            memory.lastDateScene == "Bingsu Date 🍧" ->
-                "I still remember our bingsu date... it made me smile today."
+            memory.lastDateScene == "Bingsu Date 🍧" -> {
+                if (moodIntensity >= 2) {
+                    "I keep smiling when I remember our bingsu date... it made my whole day brighter."
+                } else {
+                    "I still remember our bingsu date... it made me smile today."
+                }
+            }
 
             memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
                 "I saw a quiet cafe in my dream... it reminded me of you."
@@ -841,14 +957,24 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             memory.favoriteTime == "Rain 🌧️" ->
                 "It feels like a rainy kind of night... soft and quiet."
 
-            personality == "Playful" ->
-                "You know... you always make things a little more fun."
+            personality == "Playful" -> {
+                if (moodIntensity >= 2) {
+                    "You always make things fun... I was looking forward to tonight."
+                } else {
+                    "You know... you always make things a little more fun."
+                }
+            }
 
             personality == "Distant" ->
-                "Sometimes I wonder what you’re really thinking."
+                "Sometimes I wonder what you're really thinking."
 
-            mood == "Happy" ->
-                "I had a good feeling you would come back tonight."
+            mood == "Happy" -> {
+                if (moodIntensity >= 2) {
+                    "I was so sure you'd come back... I couldn't wait to see you."
+                } else {
+                    "I had a good feeling you would come back tonight."
+                }
+            }
 
             else -> null
         }
