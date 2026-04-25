@@ -57,6 +57,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Decays mood intensity over time as each day passes.
+    // When intensity reaches 0, resets mood to "Calm".
+    // Returns a Pair of (newMood, newIntensity).
+    private fun decayMood(currentMood: String, currentIntensity: Int): Pair<String, Int> {
+        val newIntensity = (currentIntensity - 1).coerceAtLeast(0)
+        val newMood = if (newIntensity == 0) "Calm" else currentMood
+        return newMood to newIntensity
+    }
+
     val characters = listOf(
         GirlfriendCharacter(
             id = 1,
@@ -194,8 +203,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
 
         val currentIntensity = _uiState.value.moodIntensity
-        val newIntensity = (currentIntensity - 1).coerceAtLeast(0)
-        val newMood = if (newIntensity == 0) "Calm" else _uiState.value.mood
+        val (newMood, newIntensity) = decayMood(_uiState.value.mood, currentIntensity)
 
         val defaultIntro = when {
             memory.lastChoice == "I wanted to see you." -> {
@@ -345,13 +353,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                             mood == "Happy" ->
                                 "I'm glad you came back."
 
-                            mood == "Playful" && moodIntensity >= 2 ->
-                                "You missed me that much? ...I like that."
-
                             mood == "Playful" ->
                                 "You missed me that much?"
 
-                            else -> "I'm glad you came back tonight."
+                            else ->
+                                "I'm glad you came back tonight."
                         }
                     }
 
