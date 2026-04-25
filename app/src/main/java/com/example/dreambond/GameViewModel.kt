@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+// Holds all UI/game state for the current play session.
+// Compose observes this through StateFlow and updates the UI automatically.
 data class GameUiState(
     val selectedCharacter: GirlfriendCharacter? = null,
     val affection: Int = 0,
@@ -39,8 +41,12 @@ data class GameUiState(
     val sceneOptions: List<String> = emptyList()
 )
 
+// Main ViewModel for DreamBond.
+// Responsible for chat logic, relationship progression, memory, scenes, and saving progress.
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
+    // Converts the user's selected reply into Mina's current mood.
+    // This mood affects future dialogue and goodnight messages.
     private fun getMoodFromChoice(choice: String): String {
         return when (choice) {
             "I wanted to see you." -> "Happy"
@@ -80,6 +86,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
+    // Selects Mina and restores saved progress if it exists.
+    // If there is no saved progress, starts a fresh conversation.
     fun selectCharacter(character: GirlfriendCharacter) {
         viewModelScope.launch {
             val savedProgress = repository.getProgress(character.id)
@@ -109,10 +117,13 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Handles a normal chat reply.
+    // Phase 1: user message appears and Mina starts typing,
+    // Phase 2: after delay, Mina replies and the turn ends.
     fun chooseReply(option: DialogueOption) {
         val dynamicReply = getDynamicReply(option)
 
-        // User message + start typing
+        // Phase 1: immediately show the player choice and set Mina to typing.
         _uiState.update { current ->
             val updatedMemory = when (option.text) {
                 "I wanted to see you." -> current.memory.copy(
@@ -145,7 +156,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             )
         }
 
-        // Delay + Mina response
+        // Phase 2: after a short delay, post Mina's response and end this turn.
         viewModelScope.launch {
             delay(1200)
             _uiState.update { current ->
@@ -165,10 +176,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Start the next day.
+    // Priority:
+    /// 1. Ask missing memory questions.
+    /// 2. Let Mina initiate conversation.
+    /// 3. Recall past memory
+    /// 4. Use default intro
     fun nextDay() {
         val character = _uiState.value.selectedCharacter
         val memory = _uiState.value.memory
 
+        // Ask profile questions in order across different days.
         val shouldAskDate = memory.favoriteDate.isBlank()
         val shouldAskFood = memory.favoriteDate.isNotBlank() && memory.favoriteFood.isBlank()
         val shouldAskTime = memory.favoriteFood.isNotBlank() && memory.favoriteTime.isBlank()
@@ -199,6 +217,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val initiatedLine = getMinaInitiatedLine()
         val recallLine = getMemoryRecallLine()
 
+        // Priority: required questions first; otherwise mix variation lines with weighted randomness.
         val intro = when {
             shouldAskDate || shouldAskFood || shouldAskTime -> defaultIntro
             initiatedLine != null && Random.nextInt(100) < 60 -> initiatedLine
@@ -237,6 +256,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Saves only basic progress to Room.
+    // Currently saves: character, affection, and day.
+    // Memory is not persisted yet unless you add it to GameProgressEntity later.
     fun saveProgress() {
         val state = _uiState.value
         val character = state.selectedCharacter ?: return
@@ -264,6 +286,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Converts affection points into relationship level.
     fun getRelationShipLevel(): String {
         val affection = _uiState.value.affection
         return when {
@@ -274,6 +297,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Generates Mina's reply based on affection, mood, and memory.
     fun getDynamicReply(option: DialogueOption): String {
         val mood = _uiState.value.mood
         val affection = _uiState.value.affection
@@ -339,6 +363,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Determines the player's interaction style based on memory points.
     fun getPersonalityType(): String {
         val memory = _uiState.value.memory
 
@@ -353,6 +378,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Creates a personalized goodnight message based on scene, food, time, and mood.
     fun getGoodnightMessage(): String {
         val memory = _uiState.value.memory
         val mood = _uiState.value.mood
@@ -379,6 +405,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Starts a profile question: favorite date type.
     fun askFavoriteDateQuestion(intro: String? = null) {
         _uiState.update { current ->
             val dayIntro = intro ?: current.currentMessage
@@ -407,6 +434,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Saves user's favorite date choice into Mina's memory.
     fun selectFavoriteDate(date: String) {
         val response = "Ahh... $date sounds nice. I'll remember that."
         _uiState.update { current ->
@@ -425,6 +453,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Saves favorite food.
+    // Some answers can trigger special date scenes.
     fun askFavoriteFoodQuestion(intro: String? = null) {
         _uiState.update { current ->
             val dayIntro = intro ?: current.currentMessage
@@ -453,7 +483,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Saves favorite food.
+    // Bingsu starts Bingsu Date.
+    // Coffee starts Cafe Date.
     fun selectFavoriteFood(food: String) {
+        // Some food answers branch directly into a short date scene instead of ending the day.
         if (food.contains("Bingsu", ignoreCase = true)) {
             _uiState.update { current ->
                 current.copy(
@@ -509,6 +543,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Starts the "favorite time of day" question (Night / Rain / Sunset).
+    // Optionally replaces the current into when triggered at the start of a new day.
+    // Updates UI to show time options and adds Mina's question messages.
     fun askFavoriteTimeQuestion(intro: String? = null) {
         _uiState.update { current ->
             val dayIntro = intro ?: current.currentMessage
@@ -537,6 +574,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Handles user's selection of favorite time preference.
+    // Updates memory (favoriteTime), generates a response, and ends the current interaction.
+    // This value is later used for:
+    // - dynamic replies
+    // - memory recall lines
+    // - goodnight messages
     fun selectFavoriteTime(time: String) {
         val response = "Ahh… $time. That tells me a lot about you. I'll keep that close."
         _uiState.update { current ->
@@ -557,6 +600,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Starts the Bingsu Date scene.
     fun startBingsuDateScene() {
         _uiState.update { current ->
             current.copy(
@@ -578,6 +622,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Starts the Cafe Date scene.
+    // This is a multistep scene using sceneStep.
     fun startCafeDateScene() {
         _uiState.update { current ->
             current.copy(
@@ -596,10 +642,13 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Handles scene choices.
+    // Routes Cafe Date to its own multistep handler.
     fun chooseSceneOption(choice: String) {
         val currentScene = _uiState.value.activeScene
         val currentStep = _uiState.value.sceneStep
 
+        // Route to a multistep scene handler when needed.
         if (currentScene == "CAFE_DATE") {
             handleCafeDateChoice(choice, currentStep)
             return
@@ -654,7 +703,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Handles Cafe Date as a 2-step mini story:
+    // Step 1: choose seat
+    // Step 2: choose drink
     private fun handleCafeDateChoice(choice: String, step: Int) {
+        // Simple 2-step scene state machine: seating choice -> order choice -> finish.
         when (step) {
             1 -> {
                 val reply = when (choice) {
@@ -732,6 +785,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Mina recalls saved memories naturally on a new day.
     fun getMemoryRecallLine(): String? {
         val memory = _uiState.value.memory
         val personality = getPersonalityType()
@@ -765,6 +819,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Mina sometimes starts the conversation herself.
     fun getMinaInitiatedLine(): String? {
         val memory = _uiState.value.memory
         val personality = getPersonalityType()
@@ -799,10 +854,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Adds Mina's final goodnight line before allowing the user to end the day.
     fun continueAfterReply() {
         val finalLine = getGoodnightMessage()
 
         _uiState.update { current ->
+            // Only append the goodnight line once, and only after a turn has ended.
             if (!current.sessionEnded || current.readyToEndDay) {
                 return@update current
             }
