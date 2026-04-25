@@ -195,12 +195,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 character?.introLine ?: ""
         }
 
+        val initiatedLine = getMinaInitiatedLine()
         val recallLine = getMemoryRecallLine()
-        val intro = if (recallLine != null && !shouldAskDate && !shouldAskFood && !shouldAskTime
-            && memory.lastChoice.isBlank() && Random.nextBoolean()) {
-            recallLine
-        } else {
-            defaultIntro
+
+        val intro = when {
+            shouldAskDate || shouldAskFood || shouldAskTime -> defaultIntro
+            initiatedLine != null && Random.nextInt(100) < 60 -> initiatedLine
+            recallLine != null && Random.nextInt(100) < 40 -> recallLine
+            else -> defaultIntro
         }
 
         if (shouldAskDate) {
@@ -691,6 +693,40 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
             personality == "Distant" ->
                 "You still feel a little hard to read... but I want to understand you."
+
+            else -> null
+        }
+    }
+
+    fun getMinaInitiatedLine(): String? {
+        val memory = _uiState.value.memory
+        val personality = getPersonalityType()
+        val mood = _uiState.value.mood
+
+        return when {
+            memory.lastDateScene == "Cafe Date ☕" ->
+                "I was thinking about that cafe again... it felt peaceful being there with you."
+
+            memory.lastDateScene == "Bingsu Date 🍧" ->
+                "I still remember our bingsu date... it made me smile today."
+
+            memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
+                "I saw a quiet cafe in my dream... it reminded me of you."
+
+            memory.favoriteFood.contains("Bingsu", ignoreCase = true) ->
+                "I thought about bingsu today... maybe because of you."
+
+            memory.favoriteTime == "Rain 🌧️" ->
+                "It feels like a rainy kind of night... soft and quiet."
+
+            personality == "Playful" ->
+                "You know... you always make things a little more fun."
+
+            personality == "Distant" ->
+                "Sometimes I wonder what you’re really thinking."
+
+            mood == "Happy" ->
+                "I had a good feeling you would come back tonight."
 
             else -> null
         }
