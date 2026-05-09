@@ -1,6 +1,5 @@
 package com.example.dreambond.ui
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -15,10 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,13 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.dreambond.R
 import com.example.dreambond.ChatBubble
+import com.example.dreambond.R
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
-import com.example.dreambond.ui.theme.DreamBondTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -95,10 +93,15 @@ fun ChatScreen(
         else -> Color(0xFFE91E63)
     }
 
-    val portraitRes = when (relationshipLevel) {
-        "Stranger" -> R.drawable.mina_stranger
-        "Friend" -> R.drawable.mina_friend
-        "Close" -> R.drawable.mina_close
+    val portraitRes = when (character?.name) {
+        "Mina" -> when (relationshipLevel) {
+            "Stranger" -> R.drawable.mina_stranger
+            "Friend" -> R.drawable.mina_friend
+            "Close" -> R.drawable.mina_close
+            else -> R.drawable.mina_special
+        }
+
+        "Alice" -> R.drawable.alice_default
         else -> R.drawable.mina_special
     }
 
@@ -125,11 +128,7 @@ fun ChatScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text(
-                            text = "Continue",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
+                        Text("Continue")
                     }
                 }
             } else if (sessionEnded && !isTyping) {
@@ -146,32 +145,27 @@ fun ChatScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text(
-                            text = "Say Goodnight 🌙",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
+                        Text("Say Goodnight 🌙")
                     }
                 }
             }
         }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Main chat content area. THis scrolls so the chat can grow while the
-            // input/action area stays near the bottom the screen.
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Header row: Mina's name on the left and a music toggle button on the right.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -182,7 +176,6 @@ fun ChatScreen(
                         color = Color.White
                     )
 
-                    // Lets the player quickly toggle background music during the chat.
                     Button(
                         onClick = onToggleMusic,
                         shape = RoundedCornerShape(50),
@@ -191,14 +184,12 @@ fun ChatScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text(
-                            text = if (isMusicEnabled) "🎵 On" else "🔇 Off"
-                        )
+                        Text(if (isMusicEnabled) "🎵 On" else "🔇 Off")
                     }
                 }
 
                 Text(
-                    text = "A quiet night with her",
+                    text = "A quiet night with ${character?.name ?: "her"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFB8C1EC)
                 )
@@ -206,9 +197,7 @@ fun ChatScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF202845)
-                    )
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF202845))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -218,165 +207,130 @@ fun ChatScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "Affection: $affection ❤️",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
-                            )
-
-                            Text(
-                                text = relationshipLevel,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = statusColor
-                            )
+                            Text("Affection: $affection ❤️", color = Color.White)
+                            Text(relationshipLevel, color = statusColor)
                         }
 
-                        Text(
-                            text = "Mood: $mood",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFB8C1EC)
-                        )
+                        Text("Mood: $mood", color = Color(0xFFB8C1EC))
 
                         HorizontalDivider(color = Color(0xFF3A4267))
 
                         Text(
-                            text = "Mina adapts to you:  $personalityType",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "${character?.name ?: "Mina"} adapts to you: $personalityType",
                             color = Color(0xFFB8C1EC)
                         )
 
                         Text(
                             text = getMoodText(relationshipLevel),
-                            style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFB8C1EC)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Crossfade(targetState = portraitRes, label = "MinaImage") { target ->
-                        Image(
-                            painter = painterResource(id = target),
-                            contentDescription = "Mina portrait",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-
-                if (shouldShowMessageContainer) {
-                    Card(
+                    Image(
+                        painter = painterResource(id = portraitRes),
+                        contentDescription = character?.name ?: "Character portrait",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 120.dp, max = 240.dp),
-                        shape = RoundedCornerShape(
-                            topStart = 20.dp,
-                            topEnd = 20.dp,
-                            bottomStart = 8.dp,
-                            bottomEnd = 20.dp
-                        ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF2A3358)
-                        )
+                            .height(220.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            if (shouldShowMessageContainer) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp, max = 240.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A3358))
+                ) {
+                    val animatedText =
+                        if (visibleMessages.isEmpty() && visibleCurrentMessage.isNotEmpty()) {
+                            typewriterText(visibleCurrentMessage)
+                        } else {
+                            ""
+                        }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val animatedText =
-                            if (visibleMessages.isEmpty() && visibleCurrentMessage.isNotEmpty()) {
-                                typewriterText(visibleCurrentMessage)
-                            } else {
-                                ""
+                        if (visibleMessages.isNotEmpty()) {
+                            items(visibleMessages) { message ->
+                                ChatBubble(
+                                    message = message,
+                                    characterName = character?.name ?: "Mina"
+                                )
+                            }
+                        } else if (visibleCurrentMessage.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = character?.name ?: "Mina",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color(0xFFFFD6E7)
+                                )
                             }
 
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (visibleMessages.isNotEmpty()) {
-                                items(visibleMessages) { message ->
-                                    ChatBubble(
-                                        message = message,
-                                        characterName = character?.name ?: "Mina"
-                                    )
-                                }
-                            } else if (visibleCurrentMessage.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = character?.name ?: "Mina",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = Color(0xFFFFD6E7)
-                                    )
-                                }
-
-                                item {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                }
-
-                                item {
-                                    Text(
-                                        text = animatedText,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = Color.White
-                                    )
-                                }
+                            item {
+                                Text(
+                                    text = animatedText,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White
+                                )
                             }
+                        }
 
-                            if (isTyping) {
-                                item {
-                                    AnimatedVisibility(
-                                        visible = true,
-                                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
-                                    ) {
-                                        TypingIndicator(name = character?.name ?: "Mina")
-                                    }
+                        if (isTyping) {
+                            item {
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
+                                ) {
+                                    TypingIndicator(name = character?.name ?: "Mina")
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                if (latestResponse.isNotBlank() && sessionEnded) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(
-                            topStart = 20.dp,
-                            topEnd = 20.dp,
-                            bottomStart = 20.dp,
-                            bottomEnd = 8.dp
-                        ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF3A4267)
+            if (latestResponse.isNotBlank() && sessionEnded) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF3A4267))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Her tone tonight",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFFB8C1EC)
                         )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Her tone tonight",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFB8C1EC)
-                            )
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                            Text(
-                                text = latestResponse,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
-                            )
-                        }
+                        Text(
+                            text = latestResponse,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
                     }
                 }
             }
 
             if (!isTyping && !sessionEnded) {
                 Column(
-                    modifier = Modifier.navigationBarsPadding(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     when {
@@ -403,11 +357,7 @@ fun ChatScreen(
                                         contentColor = Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = date,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+                                    Text(date)
                                 }
                             }
                         }
@@ -423,11 +373,7 @@ fun ChatScreen(
                                         contentColor = Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = food,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+                                    Text(food)
                                 }
                             }
                         }
@@ -443,11 +389,7 @@ fun ChatScreen(
                                         contentColor = Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = time,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+                                    Text(time)
                                 }
                             }
                         }
@@ -463,11 +405,7 @@ fun ChatScreen(
                                         contentColor = Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = option.text,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+                                    Text(option.text)
                                 }
                             }
                         }
@@ -487,7 +425,6 @@ private fun getMoodText(relationshipLevel: String): String {
     }
 }
 
-
 @Composable
 fun typewriterText(
     text: String,
@@ -504,53 +441,4 @@ fun typewriterText(
     }
 
     return displayText
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "Session Ended")
-@Composable
-private fun ChatScreenEndPreview() {
-    val sampleCharacter = GirlfriendCharacter(
-        id = 1,
-        name = "Mia",
-        personality = "Warm and playful",
-        introLine = "Hi, I have been waiting for you."
-    )
-
-    DreamBondTheme {
-        ChatScreen(
-            character = sampleCharacter,
-            affection = 10,
-            relationshipLevel = "Close",
-            personalityType = "Gentle",
-            mood = "Calm",
-            currentMessage = "Today was really special.",
-            latestResponse = "I had so much fun talking with you.",
-            sessionEnded = true,
-            readyToEndDay = false,
-            isTyping = false,
-            messages = listOf(
-                ChatMessage(text = "Hi, I have been waiting for you.", isFromUser = false),
-                ChatMessage(text = "I wanted to see you.", isFromUser = true)
-            ),
-            options = emptyList(),
-            showDateQuestion = false,
-            dateOptions = emptyList(),
-            showFoodQuestion = false,
-            foodOptions = emptyList(),
-            showTimeQuestion = false,
-            timeOptions = emptyList(),
-            activeScene = "",
-            sceneOptions = emptyList(),
-            isMusicEnabled = true,
-            onToggleMusic = {},
-            onChooseReply = {},
-            onSelectFavoriteDate = {},
-            onSelectFavoriteFood = {},
-            onSelectFavoriteTime = {},
-            onChooseSceneOption = {},
-            onContinueAfterReply = {},
-            onEndDay = {},
-            onSpeakLatestResponse = {}
-        )
-    }
 }

@@ -72,6 +72,13 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             name = "Mina",
             personality = "Calm and caring",
             introLine = "You came back tonight. I was waiting for you."
+        ),
+
+        GirlfriendCharacter(
+            id = 2,
+            name = "Alice",
+            personality = "Shy and traditional",
+            introLine = "Oh... you came. I was not sure if you would."
         )
     )
 
@@ -278,7 +285,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     // Saves only basic progress to Room.
-    // Currently saves: character, affection, and day.
+    // Currently, saves: character, affection, and day.
     // Memory is not persisted yet unless you add it to GameProgressEntity later.
     fun saveProgress() {
         val state = _uiState.value
@@ -321,12 +328,32 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     // Generates Mina's reply based on affection, mood, moodIntensity, and memory.
     // moodIntensity varies from 0 to 3, with higher values making replies more emotionally expressive.
     fun getDynamicReply(option: DialogueOption): String {
+
+        val characterName = _uiState.value.selectedCharacter?.name
         val mood = _uiState.value.mood
         val moodIntensity = _uiState.value.moodIntensity
         val affection = _uiState.value.affection
         val lastChoice = _uiState.value.memory.lastChoice
         val favoriteDate = _uiState.value.memory.favoriteDate
 
+        // Alice character branch (before Mina logic)
+        if (characterName == "Alice") {
+            return when (option.text) {
+                "I wanted to see you." ->
+                    "You say things like that so easily... it makes me shy."
+
+                "I could not sleep." ->
+                    "Then... if you want, I can stay here with you a little longer."
+
+                "I was just curious." ->
+                    "Curious about me...? I am not very interesting..."
+
+                else ->
+                    "I... I am still truing to understand you."
+            }
+        }
+
+        // Mina character logic
         return when {
             affection < 10 -> {
                 when (option.text) {
@@ -888,9 +915,27 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     // Mina recalls saved memories naturally on a new day, with intensity making them feel more fresh.
     fun getMemoryRecallLine(): String? {
         val memory = _uiState.value.memory
+        val characterName = _uiState.value.selectedCharacter?.name
         val personality = getPersonalityType()
         val moodIntensity = _uiState.value.moodIntensity
 
+        // Alice character memory recall
+        if (characterName == "Alice") {
+            return when {
+                memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
+                    "I remembered you like coffee... I thought that was very you."
+
+                memory.favoriteTime == "Rain 🌧️" ->
+                    "Rainy days feel quiet... I thought maybe you would like that too."
+
+                memory.favoriteDate == "Cafe date" ->
+                    "I was thinking about a quiet cafe... but I felt shy saying it first."
+
+                else -> null
+            }
+        }
+
+        // Mina character memory recall
         return when {
             memory.lastDateScene == "Cafe Date ☕" -> {
                 if (moodIntensity >= 2) {
