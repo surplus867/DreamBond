@@ -20,8 +20,11 @@ fun AppNavGraph(
     navController: NavHostController,
     database: DreamBondDatabase,
     minaVoiceManager: MinaVoiceManager,
-    musicManager: MusicManager
+    musicManager: MusicManager,
+    isMusicEnabled: Boolean,
+    onToggleMusic: () -> Unit
 ) {
+    // Build app-level dependencies for game state and expose UI state to routes.
     val repository = GameRepository(database.gameProgressDao())
     val factory = GameViewModelFactory(repository)
     val gameViewModel: GameViewModel = viewModel(factory = factory)
@@ -31,15 +34,18 @@ fun AppNavGraph(
         navController = navController,
         startDestination = Screen.Home.route
     ) {
+        // Home: entry point before character selection.
         composable(Screen.Home.route) {
             HomeScreen(
                 onStartClick = {
+                    // Start background music when user begins the flow.
                     musicManager.play()
                     navController.navigate(Screen.CharacterSelect.route)
                 }
             )
         }
 
+        // Character selection: choose a character, then move to chat.
         composable(Screen.CharacterSelect.route) {
             CharacterSelectScreen(
                 characters = gameViewModel.characters,
@@ -50,6 +56,7 @@ fun AppNavGraph(
             )
         }
 
+        // Chat: main gameplay loop with dialogue choices and session progression.
         composable(Screen.Chat.route) {
             ChatScreen(
                 character = uiState.selectedCharacter,
@@ -72,6 +79,9 @@ fun AppNavGraph(
                 timeOptions = uiState.timeOptions,
                 activeScene = uiState.activeScene,
                 sceneOptions = uiState.sceneOptions,
+                // Forward music toggle state so ChatScreen can control playback.
+                isMusicEnabled = isMusicEnabled,
+                onToggleMusic = onToggleMusic,
                 onChooseReply = { option ->
                     gameViewModel.chooseReply(option)
                 },
@@ -92,6 +102,7 @@ fun AppNavGraph(
                 },
                 onSpeakLatestResponse = minaVoiceManager::speak,
                 onEndDay = {
+                    // Persist progress, pause music, then show day-end summary screen.
                     gameViewModel.saveProgress()
                     musicManager.pause()
                     navController.navigate(Screen.EndDay.route)
@@ -99,11 +110,13 @@ fun AppNavGraph(
             )
         }
 
+        // End day: either continue to next day or return home and reset.
         composable(Screen.EndDay.route) {
             EndDayScreen(
                 day = uiState.day,
                 affection = uiState.affection,
                 onNextDay = {
+                    // Save then advance day; restart music for the next session.
                     gameViewModel.saveProgress()
                     gameViewModel.nextDay()
                     musicManager.restart()
@@ -113,6 +126,7 @@ fun AppNavGraph(
                     }
                 },
                 onBackToHome = {
+                    // Reset session data when exiting gameplay to Home.
                     gameViewModel.resetGame()
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }

@@ -6,6 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.dreambond.audio.MinaVoiceManager
@@ -39,11 +43,24 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface {
                     val navController = rememberNavController()
+
+                    var isMusicEnabled by remember { mutableStateOf(true) }
+
                     AppNavGraph(
                         navController = navController,
                         database = database,
                         minaVoiceManager = minaVoiceManager,
-                        musicManager = musicManager
+                        musicManager = musicManager,
+                        isMusicEnabled = isMusicEnabled,
+                        onToggleMusic = {
+                            isMusicEnabled = !isMusicEnabled
+
+                            if (isMusicEnabled) {
+                                musicManager.play()
+                            } else {
+                                musicManager.pause()
+                            }
+                        }
                     )
                 }
             }

@@ -70,6 +70,8 @@ fun ChatScreen(
     timeOptions: List<String>,
     activeScene: String,
     sceneOptions: List<String>,
+    isMusicEnabled: Boolean,
+    onToggleMusic: () -> Unit,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
     onSelectFavoriteFood: (String) -> Unit,
@@ -161,17 +163,39 @@ fun ChatScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Main chat content area. THis scrolls so the chat can grow while the
+            // input/action area stays near the bottom the screen.
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = character?.name ?: "Mina",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
-                )
+                // Header row: Mina's name on the left and a music toggle button on the right.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = character?.name ?: "Mina",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White
+                    )
+
+                    // Lets the player quickly toggle background music during the chat.
+                    Button(
+                        onClick = onToggleMusic,
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF202845),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = if (isMusicEnabled) "🎵 On" else "🔇 Off"
+                        )
+                    }
+                }
 
                 Text(
                     text = "A quiet night with her",
@@ -517,6 +541,8 @@ private fun ChatScreenEndPreview() {
             timeOptions = emptyList(),
             activeScene = "",
             sceneOptions = emptyList(),
+            isMusicEnabled = true,
+            onToggleMusic = {},
             onChooseReply = {},
             onSelectFavoriteDate = {},
             onSelectFavoriteFood = {},
