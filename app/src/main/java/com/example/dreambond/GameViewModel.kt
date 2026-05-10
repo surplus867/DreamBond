@@ -43,8 +43,21 @@ data class GameUiState(
 )
 
 // Main ViewModel for DreamBond.
-// Responsible for chat logic, relationship progression, memory, scenes, and saving progress.
+// Responsible for core chat logic, relationship progression, profile questions, and saving progress.
+// Delegates dialogue generation to GameDialogueManager and date scenes to GameSceneHandlers.
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(GameUiState())
+    val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
+
+    // Delegate managers for separated concerns
+    private lateinit var dialogueManager: GameDialogueManager
+    private lateinit var sceneHandlers: GameSceneHandlers
+
+    init {
+        dialogueManager = GameDialogueManager(_uiState)
+        sceneHandlers = GameSceneHandlers(_uiState)
+    }
 
     // Converts the user's selected reply into Mina's current mood.
     // This mood affects future dialogue and goodnight messages.
@@ -100,8 +113,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         )
     )
 
-    private val _uiState = MutableStateFlow(GameUiState())
-    val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     // Selects Mina and restores saved progress if it exists.
     // If there is no saved progress, starts a fresh conversation.
@@ -326,210 +337,33 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     // Generates Mina's reply based on affection, mood, moodIntensity, and memory.
-    // moodIntensity varies from 0 to 3, with higher values making replies more emotionally expressive.
+    // Delegates to GameDialogueManager for complex character-specific logic.
     fun getDynamicReply(option: DialogueOption): String {
-
-        val characterName = _uiState.value.selectedCharacter?.name
-        val mood = _uiState.value.mood
-        val moodIntensity = _uiState.value.moodIntensity
-        val affection = _uiState.value.affection
-        val lastChoice = _uiState.value.memory.lastChoice
-        val favoriteDate = _uiState.value.memory.favoriteDate
-
-        // Alice character branch (before Mina logic)
-        if (characterName == "Alice") {
-            return when (option.text) {
-                "I wanted to see you." ->
-                    "You say things like that so easily... it makes me shy."
-
-                "I could not sleep." ->
-                    "Then... if you want, I can stay here with you a little longer."
-
-                "I was just curious." ->
-                    "Curious about me...? I am not very interesting..."
-
-                else ->
-                    "I... I am still truing to understand you."
-            }
-        }
-
-        // Mina character logic
-        return when {
-            affection < 10 -> {
-                when (option.text) {
-                    "I wanted to see you." -> {
-                        if (lastChoice == "I could not sleep.") {
-                            "You came back again... was it another restless night?"
-                        } else {
-                            "You wanted to see me... ? I didn't expect that."
-                        }
-                    }
-
-                    "I could not sleep." -> "Then maybe the night brought you here for a reason."
-                    else -> "You're a little hard to read... but I don't mind."
-                }
-            }
-
-            affection < 25 -> {
-                when (option.text) {
-                    "I wanted to see you." -> {
-                        when {
-                            mood == "Happy" && moodIntensity >= 2 ->
-                                "You came back... that really makes me happy."
-
-                            mood == "Happy" ->
-                                "I'm glad you came back."
-
-                            mood == "Playful" ->
-                                "You missed me that much?"
-
-                            else ->
-                                "I'm glad you came back tonight."
-                        }
-                    }
-
-                    "I could not sleep." -> {
-                        if (favoriteDate == "Night walk") {
-                            "Maybe a quiet night walk would help you rest... you said you liked that."
-                        } else {
-                            "Then stay with me for a while. It's peaceful here."
-                        }
-                    }
-
-                    else -> "You always say things that make me curious."
-                }
-            }
-
-            affection < 50 -> {
-                when (option.text) {
-                    "I wanted to see you." -> {
-                        if (moodIntensity >= 2) {
-                            "I was hoping you'd say that... I really was."
-                        } else {
-                            "I was hoping you'd say that."
-                        }
-                    }
-
-                    "I could not sleep." -> {
-                        if (moodIntensity >= 2) {
-                            "Then don't rush off yet... I like these quiet moments with you."
-                        } else {
-                            "Then don't rush off yet. I like these quiet moments with you."
-                        }
-                    }
-
-                    "I was just curious." -> {
-                        if (mood == "Playful" && moodIntensity >= 2) {
-                            "Still curious about me? ...I find that cute."
-                        } else {
-                            "Still curious about me... I don't mind that at all."
-                        }
-                    }
-
-                    else -> "You know... you're kind of cute when you act mysterious."
-                }
-            }
-
-            else -> {
-                when (option.text) {
-                    "I wanted to see you." -> {
-                        if (moodIntensity >= 2) {
-                            "I missed you... I was waiting for you again. I always do."
-                        } else {
-                            "I missed you... I was waiting for you again."
-                        }
-                    }
-
-                    "I could not sleep." -> {
-                        if (moodIntensity >= 2) {
-                            "Then stay. Nights feel softer when you're here... I don't want you to leave."
-                        } else {
-                            "Then stay. Nights feel softer when you're here."
-                        }
-                    }
-
-                    "I was just curious." -> "You're here again... still curious about me?"
-                    else -> {
-                        if (moodIntensity >= 2) {
-                            "Even when you pretend otherwise, you always come back to me. That makes me happy."
-                        } else {
-                            "Even when you pretend otherwise, you always come back to me."
-                        }
-                    }
-                }
-            }
-        }
+        return dialogueManager.getDynamicReply(option)
     }
 
     // Determines the player's interaction style based on memory points.
+    // Delegates to GameDialogueManager.
     fun getPersonalityType(): String {
-        val memory = _uiState.value.memory
-
-        return when {
-            memory.playfulPoints > memory.gentlePoints &&
-                    memory.playfulPoints > memory.distantPoints -> "Playful"
-
-            memory.distantPoints > memory.gentlePoints &&
-                    memory.distantPoints > memory.playfulPoints -> "Distant"
-
-            else -> "Gentle"
-        }
+        return dialogueManager.getPersonalityType()
     }
 
     // Creates a personalized goodnight message based on scene, food, time, mood, and moodIntensity.
-    // Higher intensity makes the message more emotionally expressive.
+    // Delegates to GameDialogueManager.
     fun getGoodnightMessage(): String {
-        val memory = _uiState.value.memory
-        val mood = _uiState.value.mood
-        val moodIntensity = _uiState.value.moodIntensity
+        return dialogueManager.getGoodnightMessage()
+    }
 
-        return when {
-            memory.lastDateScene == "Cafe Date ☕" -> {
-                if (moodIntensity >= 2) {
-                    "Goodnight... I can't stop thinking about that quiet cafe with you."
-                } else {
-                    "Goodnight... I keep thinking about that quiet cafe with you."
-                }
-            }
+    // Character recalls saved memories naturally on a new day.
+    // Delegates to GameDialogueManager.
+    fun getMemoryRecallLine(): String? {
+        return dialogueManager.getMemoryRecallLine()
+    }
 
-            memory.lastDateScene == "Bingsu Date 🍧" -> {
-                if (moodIntensity >= 2) {
-                    "Goodnight... I'm still smiling about our bingsu date."
-                } else {
-                    "Goodnight... I keep thinking about our bingsu date."
-                }
-            }
-
-            memory.favoriteFood.contains("Coffee", true) -> {
-                if (moodIntensity >= 2) {
-                    "Goodnight... I really want to sit somewhere quiet with you over coffee."
-                } else {
-                    "Goodnight... maybe next time we can sit somewhere quiet with coffee."
-                }
-            }
-
-            memory.favoriteTime == "Rain 🌧️" ->
-                "Goodnight... I like nights like this, soft and quiet."
-
-            else -> when (mood) {
-                "Happy" -> {
-                    if (moodIntensity >= 2) {
-                        "Goodnight... today felt amazing with you."
-                    } else {
-                        "Goodnight... today felt really nice."
-                    }
-                }
-                "Shy" -> "Goodnight... I'll be here tomorrow."
-                "Playful" -> {
-                    if (moodIntensity >= 2) {
-                        "Goodnight... don't forget about me, okay?"
-                    } else {
-                        "Goodnight... don't forget about me."
-                    }
-                }
-                else -> "Goodnight... I'll be waiting."
-            }
-        }
+    // Character sometimes initiates conversation with player-dependent lines.
+    // Delegates to GameDialogueManager.
+    fun getMinaInitiatedLine(): String? {
+        return dialogueManager.getMinaInitiatedLine()
     }
 
     // Starts a profile question: favorite date type.
@@ -597,7 +431,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 sessionEnded = if (intro != null) false else current.sessionEnded,
                 isTyping = if (intro != null) false else current.isTyping,
                 showFoodQuestion = true,
-                foodOptions = listOf("Bingsu 🍧", "Coffee ☕", "Cake 🍰"),
+                foodOptions = listOf("Bingsu 🍧", "Coffee ☕", "Cake 🍰", "Tea 🍵"),
                 showDateQuestion = false,
                 dateOptions = emptyList(),
                 showTimeQuestion = false,
@@ -650,6 +484,49 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 )
             }
             startCafeDateScene()
+            return
+        }
+
+        // Tea triggers Tea House date scene for Alice, or normal ending for Mina
+        if (food.contains("Tea", ignoreCase = true)) {
+            val characterName = _uiState.value.selectedCharacter?.name
+
+            // Alice gets Tea House scene
+            if (characterName == "Alice") {
+                _uiState.update { current ->
+                    current.copy(
+                        showFoodQuestion = false,
+                        foodOptions = emptyList(),
+                        readyToEndDay = false,
+                        memory = current.memory.copy(favoriteFood = food),
+                        messages = current.messages +
+                                ChatMessage(text = food, isFromUser = true) +
+                                ChatMessage(
+                                    text = "Ahh... $food sounds nice. I'll remember that.",
+                                    isFromUser = false
+                                )
+                    )
+                }
+                startTeaHouseDateScene()
+                return
+            }
+
+            // Mina gets normal ending with sessionEnded = true
+            val response = "Ahh... $food sounds nice. I'll remember that."
+            _uiState.update { current ->
+                current.copy(
+                    showFoodQuestion = false,
+                    foodOptions = emptyList(),
+                    currentMessage = response,
+                    latestResponse = response,
+                    sessionEnded = true,
+                    readyToEndDay = false,
+                    memory = current.memory.copy(favoriteFood = food),
+                    messages = current.messages +
+                            ChatMessage(text = food, isFromUser = true) +
+                            ChatMessage(text = response, isFromUser = false)
+                )
+            }
             return
         }
 
@@ -708,6 +585,30 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     // - memory recall lines
     // - goodnight messages
     fun selectFavoriteTime(time: String) {
+        val characterName = _uiState.value.selectedCharacter?.name
+
+        // Alice + Rain triggers the Bookstore Date scene
+        if (characterName == "Alice" && time.contains("Rain", ignoreCase = true)) {
+            _uiState.update { current ->
+                current.copy(
+                    showTimeQuestion = false,
+                    timeOptions = emptyList(),
+                    readyToEndDay = false,
+                    memory = current.memory.copy(
+                        favoriteTime = time
+                    ),
+                    messages = current.messages +
+                            ChatMessage(text = time, isFromUser = true) +
+                            ChatMessage(
+                                text = "Rainy days... there is something I want to show you on a day like this.",
+                                isFromUser = false
+                            )
+                )
+            }
+            startBookstoreDateScene()
+            return
+        }
+
         val response = "Ahh… $time. That tells me a lot about you. I'll keep that close."
         _uiState.update { current ->
             current.copy(
@@ -728,307 +629,33 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     // Starts the Bingsu Date scene.
+    // Delegates to GameSceneHandlers.
     fun startBingsuDateScene() {
-        _uiState.update { current ->
-            current.copy(
-                activeScene = "BINGSU_DATE",
-                currentMessage = "I remembered you like bingsu... do you want to go with me tonight?",
-                latestResponse = "",
-                sessionEnded = false,
-                readyToEndDay = false,
-                messages = current.messages + ChatMessage(
-                    text = "I remembered you like bingsu... do you want to go with me tonight?",
-                    isFromUser = false
-                ),
-                sceneOptions = listOf(
-                    "Of course, let's go together.",
-                    "Only if you choose the flavor.",
-                    "Maybe next time."
-                )
-            )
-        }
+        sceneHandlers.startBingsuDateScene()
     }
 
-    // Starts the Cafe Date scene.
-    // This is a multistep scene using sceneStep.
+    // Starts the Cafe Date scene (2-step).
+    // Delegates to GameSceneHandlers.
     fun startCafeDateScene() {
-        _uiState.update { current ->
-            current.copy(
-                activeScene = "CAFE_DATE",
-                sceneStep = 1,
-                sessionEnded = false,
-                messages = current.messages + ChatMessage(
-                    text = "I remembered you like coffee... would you like to go to a quiet cafe with me?",
-                    isFromUser = false
-                ),
-                sceneOptions = listOf(
-                    "Let's sit by the window.",
-                    "Let's sit in the quiet corner."
-                )
-            )
-        }
+        sceneHandlers.startCafeDateScene()
     }
 
-    // Handles scene choices.
-    // Routes Cafe Date to its own multistep handler.
+    // Starts the Tea House Date scene for Alice (2-step).
+    // Delegates to GameSceneHandlers.
+    fun startTeaHouseDateScene() {
+        sceneHandlers.startTeaHouseDateScene()
+    }
+
+    // Starts the Bookstore Date scene for Alice (2-step).
+    // Delegates to GameSceneHandlers.
+    fun startBookstoreDateScene() {
+        sceneHandlers.startBookstoreDateScene()
+    }
+
+    // Handles scene choices, routing to appropriate scene handler.
+    // Delegates to GameSceneHandlers.
     fun chooseSceneOption(choice: String) {
-        val currentScene = _uiState.value.activeScene
-        val currentStep = _uiState.value.sceneStep
-
-        // Route to a multistep scene handler when needed.
-        if (currentScene == "CAFE_DATE") {
-            handleCafeDateChoice(choice, currentStep)
-            return
-        }
-
-        val reply = when (currentScene) {
-
-            "BINGSU_DATE" -> when (choice) {
-                "Of course, let's go together." ->
-                    "Then let's share one. It feels sweeter with you."
-
-                "Only if you choose the flavor." ->
-                    "Then I'll choose strawberry. Don't complain later."
-
-                "Maybe next time." ->
-                    "Okay... maybe another night."
-
-                else -> "..."
-            }
-
-            else -> "..."
-        }
-
-        val affectionGain = when (choice) {
-            "Of course, let's go together." -> 4
-            "Only if you choose the flavor." -> 3
-            "Maybe next time." -> 0
-            else -> 0
-        }
-
-        val sceneName = when (currentScene) {
-            "BINGSU_DATE" -> "Bingsu Date 🍧"
-            else -> ""
-        }
-
-        _uiState.update { current ->
-            current.copy(
-                affection = current.affection + affectionGain,
-                activeScene = "",
-                sceneOptions = emptyList(),
-                sessionEnded = true,
-                readyToEndDay = false,
-                memory = current.memory.copy(
-                    lastDateScene = sceneName
-                ),
-                messages = current.messages +
-                        ChatMessage(choice, isFromUser = true) +
-                        ChatMessage(reply, isFromUser = false),
-                latestResponse = reply,
-                currentMessage = reply
-            )
-        }
-    }
-
-    // Handles Cafe Date as a 2-step mini story:
-    // Step 1: choose seat
-    // Step 2: choose drink
-    private fun handleCafeDateChoice(choice: String, step: Int) {
-        // Simple 2-step scene state machine: seating choice -> order choice -> finish.
-        when (step) {
-            1 -> {
-                val reply = when (choice) {
-                    "Let's sit by the window." ->
-                        "I like that... we can watch the city lights together."
-
-                    "Let's sit in the quiet corner." ->
-                        "That sounds peaceful... just us, away from everyone else."
-
-                    else -> "..."
-                }
-
-                _uiState.update { current ->
-                    current.copy(
-                        sceneStep = 2,
-                        messages = current.messages +
-                                ChatMessage(choice, isFromUser = true) +
-                                ChatMessage(reply, isFromUser = false) +
-                                ChatMessage(
-                                    text = "What should we order?",
-                                    isFromUser = false
-                                ),
-                        sceneOptions = listOf(
-                            "Something sweet.",
-                            "Something warm.",
-                            "You choose for me."
-                        )
-                    )
-                }
-            }
-
-            2 -> {
-                val reply = when (choice) {
-                    "Something sweet." ->
-                        "Then maybe a sweet latte... it suits this moment."
-
-                    "Something warm." ->
-                        "Warm drinks make quiet nights feel softer."
-
-                    "You choose for me." ->
-                        "Then I'll choose something gentle for you."
-
-                    else -> "..."
-                }
-
-                val affectionGain = when (choice) {
-                    "Something sweet." -> 3
-                    "Something warm." -> 3
-                    "You choose for me." -> 4
-                    else -> 1
-                }
-
-                _uiState.update { current ->
-                    current.copy(
-                        affection = current.affection + affectionGain,
-                        activeScene = "",
-                        sceneStep = 0,
-                        sceneOptions = emptyList(),
-                        sessionEnded = true,
-                        memory = current.memory.copy(
-                            lastDateScene = "Cafe Date ☕"
-                        ),
-                        messages = current.messages +
-                                ChatMessage(choice, isFromUser = true) +
-                                ChatMessage(reply, isFromUser = false) +
-                                ChatMessage(
-                                    text = "I liked this cafe date... it felt calm being here with you.",
-                                    isFromUser = false
-                                ),
-                        latestResponse = reply,
-                        currentMessage = reply
-                    )
-                }
-            }
-        }
-    }
-
-    // Mina recalls saved memories naturally on a new day, with intensity making them feel more fresh.
-    fun getMemoryRecallLine(): String? {
-        val memory = _uiState.value.memory
-        val characterName = _uiState.value.selectedCharacter?.name
-        val personality = getPersonalityType()
-        val moodIntensity = _uiState.value.moodIntensity
-
-        // Alice character memory recall
-        if (characterName == "Alice") {
-            return when {
-                memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
-                    "I remembered you like coffee... I thought that was very you."
-
-                memory.favoriteTime == "Rain 🌧️" ->
-                    "Rainy days feel quiet... I thought maybe you would like that too."
-
-                memory.favoriteDate == "Cafe date" ->
-                    "I was thinking about a quiet cafe... but I felt shy saying it first."
-
-                else -> null
-            }
-        }
-
-        // Mina character memory recall
-        return when {
-            memory.lastDateScene == "Cafe Date ☕" -> {
-                if (moodIntensity >= 2) {
-                    "I can't stop replaying that quiet cafe... sitting with you felt so peaceful."
-                } else {
-                    "I was thinking about that quiet cafe... sitting with you felt peaceful."
-                }
-            }
-
-            memory.lastDateScene == "Bingsu Date 🍧" -> {
-                if (moodIntensity >= 2) {
-                    "I keep reliving our bingsu date... it felt so much sweeter because you were there."
-                } else {
-                    "I keep thinking about our bingsu date... it felt sweeter because you were there."
-                }
-            }
-
-            memory.favoriteFood.contains("Bingsu", ignoreCase = true) ->
-                "You said you like bingsu... I still remember that."
-
-            memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
-                "You said you like coffee... maybe that suits quiet nights like this."
-
-            memory.favoriteTime == "Rain 🌧️" ->
-                "Rainy nights always remind me of soft conversations."
-
-            memory.favoriteTime == "Night 🌙" ->
-                "Nights like this feel familiar somehow."
-
-            personality == "Playful" ->
-                "You have this playful side... I notice it more than you think."
-
-            personality == "Distant" ->
-                "You still feel a little hard to read... but I want to understand you."
-
-            else -> null
-        }
-    }
-
-    // Mina sometimes starts the conversation herself, with intensity affecting how eager she seems.
-    fun getMinaInitiatedLine(): String? {
-        val memory = _uiState.value.memory
-        val personality = getPersonalityType()
-        val mood = _uiState.value.mood
-        val moodIntensity = _uiState.value.moodIntensity
-
-        return when {
-            memory.lastDateScene == "Cafe Date ☕" -> {
-                if (moodIntensity >= 2) {
-                    "I can't stop thinking about that cafe... being there with you was so peaceful."
-                } else {
-                    "I was thinking about that cafe again... it felt peaceful being there with you."
-                }
-            }
-
-            memory.lastDateScene == "Bingsu Date 🍧" -> {
-                if (moodIntensity >= 2) {
-                    "I keep smiling when I remember our bingsu date... it made my whole day brighter."
-                } else {
-                    "I still remember our bingsu date... it made me smile today."
-                }
-            }
-
-            memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
-                "I saw a quiet cafe in my dream... it reminded me of you."
-
-            memory.favoriteFood.contains("Bingsu", ignoreCase = true) ->
-                "I thought about bingsu today... maybe because of you."
-
-            memory.favoriteTime == "Rain 🌧️" ->
-                "It feels like a rainy kind of night... soft and quiet."
-
-            personality == "Playful" -> {
-                if (moodIntensity >= 2) {
-                    "You always make things fun... I was looking forward to tonight."
-                } else {
-                    "You know... you always make things a little more fun."
-                }
-            }
-
-            personality == "Distant" ->
-                "Sometimes I wonder what you're really thinking."
-
-            mood == "Happy" -> {
-                if (moodIntensity >= 2) {
-                    "I was so sure you'd come back... I couldn't wait to see you."
-                } else {
-                    "I had a good feeling you would come back tonight."
-                }
-            }
-
-            else -> null
-        }
+        sceneHandlers.chooseSceneOption(choice)
     }
 
     // Adds Mina's final goodnight line before allowing the user to end the day.

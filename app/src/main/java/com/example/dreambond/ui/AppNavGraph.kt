@@ -50,6 +50,12 @@ fun AppNavGraph(
             CharacterSelectScreen(
                 characters = gameViewModel.characters,
                 onCharacterSelected = { character ->
+                    musicManager.setThemeForCharacter(character.name)
+                    if (isMusicEnabled && musicManager.isStarted) {
+                        musicManager.play()
+                    } else {
+                        musicManager.pause()
+                    }
                     gameViewModel.selectCharacter(character)
                     navController.navigate(Screen.Chat.route)
                 }
@@ -57,58 +63,61 @@ fun AppNavGraph(
         }
 
         // Chat: main gameplay loop with dialogue choices and session progression.
-        composable(Screen.Chat.route) {
-            ChatScreen(
-                character = uiState.selectedCharacter,
-                affection = uiState.affection,
-                relationshipLevel = gameViewModel.getRelationShipLevel(),
-                personalityType = gameViewModel.getPersonalityType(),
-                mood = uiState.mood,
-                currentMessage = uiState.currentMessage,
-                latestResponse = uiState.latestResponse,
-                sessionEnded = uiState.sessionEnded,
-                readyToEndDay = uiState.readyToEndDay,
-                isTyping = uiState.isTyping,
-                messages = uiState.messages,
-                options = gameViewModel.dialogueOptions,
-                showDateQuestion = uiState.showDateQuestion,
-                dateOptions = uiState.dateOptions,
-                showFoodQuestion = uiState.showFoodQuestion,
-                foodOptions = uiState.foodOptions,
-                showTimeQuestion = uiState.showTimeQuestion,
-                timeOptions = uiState.timeOptions,
-                activeScene = uiState.activeScene,
-                sceneOptions = uiState.sceneOptions,
-                // Forward music toggle state so ChatScreen can control playback.
-                isMusicEnabled = isMusicEnabled,
-                onToggleMusic = onToggleMusic,
-                onChooseReply = { option ->
-                    gameViewModel.chooseReply(option)
-                },
-                onSelectFavoriteDate = { date ->
-                    gameViewModel.selectFavoriteDate(date)
-                },
-                onSelectFavoriteFood = { food ->
-                    gameViewModel.selectFavoriteFood(food)
-                },
-                onSelectFavoriteTime = { time ->
-                    gameViewModel.selectFavoriteTime(time)
-                },
-                onChooseSceneOption = { choice ->
-                    gameViewModel.chooseSceneOption(choice)
-                },
-                onContinueAfterReply = {
-                    gameViewModel.continueAfterReply()
-                },
-                onSpeakLatestResponse = minaVoiceManager::speak,
-                onEndDay = {
-                    // Persist progress, pause music, then show day-end summary screen.
-                    gameViewModel.saveProgress()
-                    musicManager.pause()
-                    navController.navigate(Screen.EndDay.route)
-                }
-            )
-        }
+         composable(Screen.Chat.route) {
+             ChatScreen(
+                 character = uiState.selectedCharacter,
+                 affection = uiState.affection,
+                 relationshipLevel = gameViewModel.getRelationShipLevel(),
+                 personalityType = gameViewModel.getPersonalityType(),
+                 mood = uiState.mood,
+                 currentMessage = uiState.currentMessage,
+                 latestResponse = uiState.latestResponse,
+                 sessionEnded = uiState.sessionEnded,
+                 readyToEndDay = uiState.readyToEndDay,
+                 isTyping = uiState.isTyping,
+                 messages = uiState.messages,
+                 options = gameViewModel.dialogueOptions,
+                 showDateQuestion = uiState.showDateQuestion,
+                 dateOptions = uiState.dateOptions,
+                 showFoodQuestion = uiState.showFoodQuestion,
+                 foodOptions = uiState.foodOptions,
+                 showTimeQuestion = uiState.showTimeQuestion,
+                 timeOptions = uiState.timeOptions,
+                 activeScene = uiState.activeScene,
+                 sceneOptions = uiState.sceneOptions,
+                 // Forward music toggle state so ChatScreen can control playback.
+                 isMusicEnabled = isMusicEnabled,
+                 onToggleMusic = onToggleMusic,
+                 onChooseReply = { option ->
+                     gameViewModel.chooseReply(option)
+                 },
+                 onSelectFavoriteDate = { date ->
+                     gameViewModel.selectFavoriteDate(date)
+                 },
+                 onSelectFavoriteFood = { food ->
+                     gameViewModel.selectFavoriteFood(food)
+                 },
+                 onSelectFavoriteTime = { time ->
+                     gameViewModel.selectFavoriteTime(time)
+                 },
+                 onChooseSceneOption = { choice ->
+                     gameViewModel.chooseSceneOption(choice)
+                 },
+                 onContinueAfterReply = {
+                     gameViewModel.continueAfterReply()
+                 },
+                 onSpeakLatestResponse = { text ->
+                     // Pass character name along with text for character-specific voice
+                     minaVoiceManager.speak(uiState.selectedCharacter?.name, text)
+                 },
+                 onEndDay = {
+                     // Persist progress, pause music, then show day-end summary screen.
+                     gameViewModel.saveProgress()
+                     musicManager.pause()
+                     navController.navigate(Screen.EndDay.route)
+                 }
+             )
+         }
 
         // End day: either continue to next day or return home and reset.
         composable(Screen.EndDay.route) {
