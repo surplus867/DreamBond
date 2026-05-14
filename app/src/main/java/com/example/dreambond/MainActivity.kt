@@ -35,7 +35,9 @@ class MainActivity : ComponentActivity() {
             applicationContext,
             DreamBondDatabase::class.java,
             "dreambond_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration(false)
+            .build()
 
         enableEdgeToEdge()
 

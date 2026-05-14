@@ -51,13 +51,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     // Delegate managers for separated concerns
-    private lateinit var dialogueManager: GameDialogueManager
-    private lateinit var sceneHandlers: GameSceneHandlers
-
-    init {
-        dialogueManager = GameDialogueManager(_uiState)
-        sceneHandlers = GameSceneHandlers(_uiState)
-    }
+    private val dialogueManager = GameDialogueManager(_uiState)
+    private val sceneHandlers = GameSceneHandlers(_uiState)
 
     // Converts the user's selected reply into Mina's current mood.
     // This mood affects future dialogue and goodnight messages.
@@ -128,7 +123,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     day = savedProgress.day,
                     sessionEnded = false,
                     isTyping = false,
-                    messages = listOf(ChatMessage(text = character.introLine, isFromUser = false))
+                    messages = listOf(ChatMessage(text = character.introLine, isFromUser = false)),
+                    memory = MinaMemory(
+                        favoriteDate = savedProgress.favoriteDate,
+                        favoriteFood = savedProgress.favoriteFood,
+                        favoriteTime = savedProgress.favoriteTime,
+                        lastDateScene = savedProgress.lastDateScene,
+                        gentlePoints = savedProgress.gentlePoints,
+                        playfulPoints = savedProgress.playfulPoints,
+                        distantPoints = savedProgress.distantPoints
+                    ),
+                    mood = savedProgress.mood,
+                    moodIntensity = savedProgress.moodIntensity
                 )
             } else {
                 _uiState.value = GameUiState(
@@ -303,10 +309,30 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val character = state.selectedCharacter ?: return
 
         val progress = GameProgressEntity(
+
             id = character.id,
+
             selectedCharacter = character.name,
+
             affection = state.affection,
-            day = state.day
+
+            day = state.day,
+
+            favoriteDate = state.memory.favoriteDate,
+
+            favoriteFood = state.memory.favoriteFood,
+
+            favoriteTime = state.memory.favoriteTime,
+
+            lastDateScene = state.memory.lastDateScene,
+
+            playfulPoints = state.memory.gentlePoints,
+
+            distantPoints = state.memory.distantPoints,
+
+            mood = state.mood,
+
+            moodIntensity = state.moodIntensity
         )
 
         viewModelScope.launch {
