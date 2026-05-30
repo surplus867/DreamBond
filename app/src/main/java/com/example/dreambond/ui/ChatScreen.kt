@@ -79,10 +79,26 @@ fun ChatScreen(
     onEndDay: () -> Unit,
     onSpeakLatestResponse: (String) -> Unit
 ) {
+    var displayText by remember { mutableStateOf("") }
+    val typingSpeed = 25L
+
     LaunchedEffect(latestResponse, isTyping, sessionEnded) {
         if (sessionEnded && latestResponse.isNotBlank() && !isTyping) {
             delay(300)
             onSpeakLatestResponse(latestResponse)
+        }
+    }
+
+    val visibleMessages = messages.filter { it.text.isNotBlank() }
+    val visibleCurrentMessage = currentMessage.trim()
+
+    LaunchedEffect(visibleCurrentMessage) {
+        if (visibleMessages.isEmpty() && visibleCurrentMessage.isNotEmpty()) {
+            displayText = ""
+            visibleCurrentMessage.forEach { char ->
+                displayText += char
+                delay(typingSpeed)
+            }
         }
     }
 
@@ -105,8 +121,6 @@ fun ChatScreen(
         else -> R.drawable.mina_special
     }
 
-    val visibleMessages = messages.filter { it.text.isNotBlank() }
-    val visibleCurrentMessage = currentMessage.trim()
     val shouldShowMessageContainer =
         !sessionEnded && (visibleMessages.isNotEmpty() || visibleCurrentMessage.isNotEmpty() || isTyping)
 
@@ -157,13 +171,13 @@ fun ChatScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
@@ -226,18 +240,40 @@ fun ChatScreen(
                         )
                     }
                 }
+            }
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = portraitRes),
-                        contentDescription = character?.name ?: "Character portrait",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp),
-                        contentScale = ContentScale.Crop
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = portraitRes),
+                    contentDescription = character?.name ?: "Character portrait",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(420.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xCC1C2340)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = character?.name ?: "Mina",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFFFFD6E7)
+                    )
+
+                    Text(
+                        text = latestResponse.ifBlank { currentMessage },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White
                     )
                 }
             }
@@ -250,12 +286,6 @@ fun ChatScreen(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF2A3358))
                 ) {
-                    val animatedText =
-                        if (visibleMessages.isEmpty() && visibleCurrentMessage.isNotEmpty()) {
-                            typewriterText(visibleCurrentMessage)
-                        } else {
-                            ""
-                        }
 
                     LazyColumn(
                         modifier = Modifier
@@ -281,7 +311,7 @@ fun ChatScreen(
 
                             item {
                                 Text(
-                                    text = animatedText,
+                                    text = displayText,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = Color.White
                                 )
@@ -423,22 +453,4 @@ private fun getMoodText(relationshipLevel: String): String {
         "Close" -> "There is warmth and familiarity between you."
         else -> "She seems deeply attached to you tonight."
     }
-}
-
-@Composable
-fun typewriterText(
-    text: String,
-    typingSpeed: Long = 25L
-): String {
-    var displayText by remember { mutableStateOf("") }
-
-    LaunchedEffect(text) {
-        displayText = ""
-        text.forEach { char ->
-            displayText += char
-            delay(typingSpeed)
-        }
-    }
-
-    return displayText
 }
