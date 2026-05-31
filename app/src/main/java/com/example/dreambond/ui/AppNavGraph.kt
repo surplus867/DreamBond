@@ -65,7 +65,6 @@ fun AppNavGraph(
         // Chat: main gameplay loop with dialogue choices and session progression.
          composable(Screen.Chat.route) {
              ChatScreen(
-                  viewModel = gameViewModel,
                  character = uiState.selectedCharacter,
                  affection = uiState.affection,
                  relationshipLevel = gameViewModel.getRelationShipLevel(),
@@ -86,6 +85,7 @@ fun AppNavGraph(
                  timeOptions = uiState.timeOptions,
                  activeScene = uiState.activeScene,
                  sceneOptions = uiState.sceneOptions,
+                 sceneBackgroundRes = gameViewModel.getBackgroundRes(uiState.selectedCharacter?.name, uiState.activeScene),
                  // Forward music toggle state so ChatScreen can control playback.
                  isMusicEnabled = isMusicEnabled,
                  onToggleMusic = onToggleMusic,

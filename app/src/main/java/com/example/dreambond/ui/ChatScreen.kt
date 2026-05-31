@@ -37,13 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.dreambond.ChatBubble
-import com.example.dreambond.GameViewModel
 import com.example.dreambond.R
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
@@ -51,7 +49,6 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun ChatScreen(
-    viewModel: GameViewModel,
     character: GirlfriendCharacter?,
     affection: Int,
     relationshipLevel: String,
@@ -72,6 +69,7 @@ fun ChatScreen(
     timeOptions: List<String>,
     activeScene: String,
     sceneOptions: List<String>,
+    sceneBackgroundRes: Int,
     isMusicEnabled: Boolean,
     onToggleMusic: () -> Unit,
     onChooseReply: (DialogueOption) -> Unit,
@@ -85,8 +83,6 @@ fun ChatScreen(
 ) {
     var displayText by remember { mutableStateOf("") }
     val typingSpeed = 25L
-
-    val backgroundRes = viewModel.getBackgroundRes(character?.name, activeScene)
 
     LaunchedEffect(latestResponse, isTyping, sessionEnded) {
         if (sessionEnded && latestResponse.isNotBlank() && !isTyping) {
@@ -174,21 +170,20 @@ fun ChatScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
-                painter = painterResource(id = backgroundRes),
+                painter = painterResource(id = sceneBackgroundRes),
                 contentDescription = "Scene background",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
+            
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .alpha(0.92f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
