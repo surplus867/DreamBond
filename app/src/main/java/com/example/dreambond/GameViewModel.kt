@@ -424,6 +424,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     // Saves user's favorite date choice into Mina's memory.
     fun selectFavoriteDate(date: String) {
         val response = "Ahh... $date sounds nice. I'll remember that."
+        val sceneForDate = when (date) {
+            "Tea House" -> "TEA_DATE"
+            "Cafe" -> "CAFE_DATE"
+            "Bookstore" -> "BOOKSTORE_DATE"
+            "University" -> "UNIVERSITY_DATE"
+            "Park" -> "PARK_DATE"
+            "Festival" -> "FESTIVAL_DATE"
+            else -> ""
+        }
         _uiState.update { current ->
             current.copy(
                 showDateQuestion = false,
@@ -432,6 +441,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 sessionEnded = true,
                 readyToEndDay = false,
                 latestResponse = response,
+                activeScene = sceneForDate,
                 memory = current.memory.copy(favoriteDate = date),
                 messages = current.messages +
                         ChatMessage(text = date, isFromUser = true) +
@@ -703,6 +713,21 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     isFromUser = false
                 )
             )
+        }
+    }
+
+    fun getBackgroundRes(
+        characterName: String?,
+        activeScene: String
+    ): Int {
+        return when (activeScene) {
+            "CAFE_DATE" -> R.drawable.cafe_bg
+            "TEA_DATE" -> R.drawable.bg_tea_house
+            "BOOKSTORE_DATE" -> R.drawable.bg_bookstore
+            "UNIVERSITY_DATE" -> R.drawable.bg_university
+            "PARK_DATE" -> R.drawable.bg_park
+            "FESTIVAL_DATE" -> R.drawable.bg_festival
+            else -> R.drawable.bg_default_night
         }
     }
 }

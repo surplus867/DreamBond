@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,11 +37,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.dreambond.ChatBubble
+import com.example.dreambond.GameViewModel
 import com.example.dreambond.R
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
@@ -48,6 +51,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun ChatScreen(
+    viewModel: GameViewModel,
     character: GirlfriendCharacter?,
     affection: Int,
     relationshipLevel: String,
@@ -81,6 +85,8 @@ fun ChatScreen(
 ) {
     var displayText by remember { mutableStateOf("") }
     val typingSpeed = 25L
+
+    val backgroundRes = viewModel.getBackgroundRes(character?.name, activeScene)
 
     LaunchedEffect(latestResponse, isTyping, sessionEnded) {
         if (sessionEnded && latestResponse.isNotBlank() && !isTyping) {
@@ -166,14 +172,23 @@ fun ChatScreen(
         }
     ) { innerPadding ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = backgroundRes),
+                contentDescription = "Scene background",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .alpha(0.92f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -442,6 +457,7 @@ fun ChatScreen(
                     }
                 }
             }
+        }
         }
     }
 }

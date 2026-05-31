@@ -65,6 +65,7 @@ fun AppNavGraph(
         // Chat: main gameplay loop with dialogue choices and session progression.
          composable(Screen.Chat.route) {
              ChatScreen(
+                  viewModel = gameViewModel,
                  character = uiState.selectedCharacter,
                  affection = uiState.affection,
                  relationshipLevel = gameViewModel.getRelationShipLevel(),
