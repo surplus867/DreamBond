@@ -119,7 +119,13 @@ fun ChatScreen(
             else -> R.drawable.mina_special
         }
 
-        "Alice" -> R.drawable.alice_default
+        "Alice" -> when (relationshipLevel) {
+            "Stranger" -> R.drawable.alice_stranger
+            "Friend" -> R.drawable.alice_friend
+            "Close" -> R.drawable.alice_close
+            else -> R.drawable.alice_special
+        }
+
         else -> R.drawable.mina_special
     }
 
