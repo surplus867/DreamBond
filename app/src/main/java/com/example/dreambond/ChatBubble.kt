@@ -40,9 +40,9 @@ fun ChatBubble(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (message.isFromUser) {
-                        Color(0xFF5561A8)
+                        Color(0xAA5561A8)
                     } else {
-                        Color(0xFF2A3358)
+                        Color(0xAA2A3358)
                     }
                 )
             ) {

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import com.example.dreambond.R
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ChatScreen(
@@ -84,9 +86,9 @@ fun ChatScreen(
     var displayText by remember { mutableStateOf("") }
     val typingSpeed = 25L
 
-    LaunchedEffect(latestResponse, isTyping, sessionEnded) {
-        if (sessionEnded && latestResponse.isNotBlank() && !isTyping) {
-            delay(300)
+    LaunchedEffect(latestResponse, isTyping) {
+        if (latestResponse.isNotBlank() && !isTyping) {
+            delay(300.milliseconds)
             onSpeakLatestResponse(latestResponse)
         }
     }
@@ -99,7 +101,7 @@ fun ChatScreen(
             displayText = ""
             visibleCurrentMessage.forEach { char ->
                 displayText += char
-                delay(typingSpeed)
+                delay(typingSpeed.milliseconds)
             }
         }
     }
@@ -227,7 +229,7 @@ fun ChatScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF202845))
+                    colors = CardDefaults.cardColors(containerColor = Color(0x88202845))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -258,39 +260,55 @@ fun ChatScreen(
                 }
             }
 
-            Card(
+            val isSceneFocusedBackground =
+                sceneBackgroundRes != R.drawable.bg_default_night || activeScene.isNotBlank()
+            val portraitHeight = if (isSceneFocusedBackground) 280.dp else 360.dp
+            val portraitWidthFraction = if (isSceneFocusedBackground) 0.72f else 0.82f
+            val portraitAlpha = if (character?.name == "Alice") 0.78f else 0.9f
+
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp)
+                horizontalArrangement = Arrangement.Center
             ) {
-                Image(
-                    painter = painterResource(id = portraitRes),
-                    contentDescription = character?.name ?: "Character portrait",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(420.dp),
-                    contentScale = ContentScale.Crop
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(portraitWidthFraction),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                ) {
+                    Image(
+                        painter = painterResource(id = portraitRes),
+                        contentDescription = character?.name ?: "Character portrait",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(portraitHeight)
+                            .alpha(portraitAlpha),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xCC1C2340)
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = character?.name ?: "Mina",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color(0xFFFFD6E7)
+            val headlineLine = latestResponse.ifBlank { currentMessage }
+            if (headlineLine.isNotBlank() && visibleMessages.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xCC1C2340)
                     )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = character?.name ?: "Mina",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFFFFD6E7)
+                        )
 
-                    Text(
-                        text = latestResponse.ifBlank { currentMessage },
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
-                    )
+                        Text(
+                            text = headlineLine,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 
@@ -300,7 +318,7 @@ fun ChatScreen(
                         .fillMaxWidth()
                         .heightIn(min = 120.dp, max = 240.dp),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A3358))
+                    colors = CardDefaults.cardColors(containerColor = Color(0x882A3358))
                 ) {
 
                     LazyColumn(
@@ -348,11 +366,12 @@ fun ChatScreen(
                 }
             }
 
-            if (latestResponse.isNotBlank() && sessionEnded) {
+            val latestAlreadyInMessages = visibleMessages.any { !it.isFromUser && it.text == latestResponse }
+            if (latestResponse.isNotBlank() && sessionEnded && !latestAlreadyInMessages) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF3A4267))
+                    colors = CardDefaults.cardColors(containerColor = Color(0x883A4267))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -385,7 +404,11 @@ fun ChatScreen(
                                 Button(
                                     onClick = { onChooseSceneOption(choice) },
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0x885561A8),
+                                        contentColor = Color.White
+                                    )
                                 ) {
                                     Text(choice)
                                 }
@@ -399,7 +422,7 @@ fun ChatScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF7B5EA7),
+                                        containerColor = Color(0x887B5EA7),
                                         contentColor = Color.White
                                     )
                                 ) {
@@ -415,7 +438,7 @@ fun ChatScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF8D6E63),
+                                        containerColor = Color(0x888D6E63),
                                         contentColor = Color.White
                                     )
                                 ) {
@@ -431,7 +454,7 @@ fun ChatScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF37474F),
+                                        containerColor = Color(0x8837474F),
                                         contentColor = Color.White
                                     )
                                 ) {
@@ -447,7 +470,7 @@ fun ChatScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF5561A8),
+                                        containerColor = Color(0x885561A8),
                                         contentColor = Color.White
                                     )
                                 ) {

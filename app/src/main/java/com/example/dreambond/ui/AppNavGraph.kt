@@ -85,7 +85,14 @@ fun AppNavGraph(
                  timeOptions = uiState.timeOptions,
                  activeScene = uiState.activeScene,
                  sceneOptions = uiState.sceneOptions,
-                 sceneBackgroundRes = gameViewModel.getBackgroundRes(uiState.selectedCharacter?.name, uiState.activeScene),
+                 sceneBackgroundRes = gameViewModel.getBackgroundRes(
+                     uiState.selectedCharacter?.name,
+                     uiState.activeScene,
+                     uiState.currentContextTag,
+                     uiState.latestResponse,
+                     uiState.currentMessage,
+                     uiState.messages
+                 ),
                  // Forward music toggle state so ChatScreen can control playback.
                  isMusicEnabled = isMusicEnabled,
                  onToggleMusic = onToggleMusic,
