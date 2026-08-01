@@ -17,22 +17,7 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
 
         val engine = tts ?: return
 
-        // Initialize with default Korean locale for Mina
-        val locale = Locale.KOREAN
-        val localeResult = engine.setLanguage(locale)
-        if (localeResult ==
-            TextToSpeech.LANG_MISSING_DATA ||
-            localeResult == TextToSpeech.LANG_NOT_SUPPORTED
-        ) {
-            return
-        }
-
-        selectBestKoreanVoice(engine)?.let { bestVoice ->
-            engine.voice = bestVoice
-        }
-
-        engine.setSpeechRate(0.84f)
-        engine.setPitch(1.18f)
+        applyCharacterVoice(characterName = "Mina")
         isReady = true
     }
 
@@ -66,25 +51,38 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
 
         when (characterName) {
             "Alice" -> {
-                // Alice: English (Canadian) voice
+                // Alice: English (Canadian)
                 val localeResult = engine.setLanguage(Locale.CANADA)
                 if (localeResult == TextToSpeech.LANG_MISSING_DATA ||
                     localeResult == TextToSpeech.LANG_NOT_SUPPORTED
                 ) {
-                    // Fallback to English if Canadian not available
-                    engine.setLanguage(Locale.ENGLISH)
+                    engine.setLanguage(Locale.US)
+                }
+                selectBestEnglishVoice(engine, Locale.CANADA)
+                    ?: selectBestEnglishVoice(engine, Locale.US)
+                    ?: selectBestEnglishVoice(engine, Locale.ENGLISH)
+                ?.let { bestVoice ->
+                    engine.voice = bestVoice
                 }
                 engine.setSpeechRate(0.86f)
                 engine.setPitch(1.08f)
             }
             else -> {
-                // Mina: Korean voice (default)
-                engine.setLanguage(Locale.KOREAN)
-                selectBestKoreanVoice(engine)?.let { bestVoice ->
+                // Mina: prefer natural US English to avoid accented fallback voices
+                val localeResult = engine.setLanguage(Locale.US)
+                if (localeResult == TextToSpeech.LANG_MISSING_DATA ||
+                    localeResult == TextToSpeech.LANG_NOT_SUPPORTED
+                ) {
+                    engine.setLanguage(Locale.ENGLISH)
+                }
+                selectBestEnglishVoice(engine, Locale.US)
+                    ?: selectBestEnglishVoice(engine, Locale.ENGLISH)
+                    ?: selectBestEnglishVoice(engine, Locale.CANADA)
+                ?.let { bestVoice ->
                     engine.voice = bestVoice
                 }
-                engine.setSpeechRate(0.84f)
-                engine.setPitch(1.18f)
+                engine.setSpeechRate(0.92f)
+                engine.setPitch(1.0f)
             }
         }
     }
@@ -98,17 +96,26 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
         tts?.shutdown()
     }
 
-    private fun selectBestKoreanVoice(engine: TextToSpeech): Voice? {
+    private fun selectBestEnglishVoice(engine: TextToSpeech, locale: Locale): Voice? {
         return engine.voices
             ?.asSequence()
             ?.filter { voice ->
-                voice.locale?.language == Locale.KOREAN.language
+                voice.locale?.language == locale.language
+            }
+            ?.filterNot { voice ->
+                voice.isNetworkConnectionRequired
             }
             ?.sortedWith(
                 compareBy<Voice> {
-                    // Prefer voices that might be female (name hint)
                     val name = it.name.lowercase()
-                    !(name.contains("female") || name.contains("feminine"))
+                    val femaleHint = name.contains("female") || name.contains("feminine")
+                    val neuralHint = name.contains("neural") || name.contains("wavenet")
+                    when {
+                        femaleHint && neuralHint -> 0
+                        femaleHint -> 1
+                        neuralHint -> 2
+                        else -> 3
+                    }
                 }
                     .thenByDescending { it.quality }
                     .thenBy { it.latency }
