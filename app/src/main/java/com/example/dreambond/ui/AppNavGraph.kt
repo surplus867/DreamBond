@@ -11,7 +11,9 @@ import com.example.dreambond.GameViewModel
 import com.example.dreambond.GameViewModelFactory
 import com.example.dreambond.audio.MinaVoiceManager
 import com.example.dreambond.audio.MusicManager
+import com.example.dreambond.data.CharacterMemoryRepository
 import com.example.dreambond.data.GameRepository
+import com.example.dreambond.data.PlayerJournalRepository
 import com.example.dreambond.data.local.DreamBondDatabase
 import com.example.dreambond.navigation.Screen
 
@@ -26,7 +28,13 @@ fun AppNavGraph(
 ) {
     // Build app-level dependencies for game state and expose UI state to routes.
     val repository = GameRepository(database.gameProgressDao())
-    val factory = GameViewModelFactory(repository)
+    val characterMemoryRepository = CharacterMemoryRepository(database.characterMemoryDao())
+    val playerJournalRepository = PlayerJournalRepository(database.playerJournalDao())
+    val factory = GameViewModelFactory(
+        repository = repository,
+        characterMemoryRepository = characterMemoryRepository,
+        playerJournalRepository = playerJournalRepository
+    )
     val gameViewModel: GameViewModel = viewModel(factory = factory)
     val uiState by gameViewModel.uiState.collectAsState()
 
@@ -111,6 +119,12 @@ fun AppNavGraph(
                  onChooseSceneOption = { choice ->
                      gameViewModel.chooseSceneOption(choice)
                  },
+                 onOpenJournal = {
+                     navController.navigate(Screen.Journal.route)
+                 },
+                 onOpenMemories = {
+                     navController.navigate(Screen.Memories.route)
+                 },
                  onContinueAfterReply = {
                      gameViewModel.continueAfterReply()
                  },
@@ -126,6 +140,22 @@ fun AppNavGraph(
                  }
              )
          }
+
+        composable(Screen.Journal.route) {
+            JournalScreen(
+                gameViewModel = gameViewModel,
+                uiState = uiState,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Memories.route) {
+            MemoryGalleryScreen(
+                gameViewModel = gameViewModel,
+                uiState = uiState,
+                onBack = { navController.popBackStack() }
+            )
+        }
 
         // End day: either continue to next day or return home and reset.
         composable(Screen.EndDay.route) {

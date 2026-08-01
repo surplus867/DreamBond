@@ -2,16 +2,23 @@ package com.example.dreambond
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dreambond.data.CharacterMemoryRepository
 import com.example.dreambond.data.GameRepository
+import com.example.dreambond.data.PlayerJournalRepository
+import com.example.dreambond.data.local.CharacterMemoryEntity
 import com.example.dreambond.data.local.GameProgressEntity
+import com.example.dreambond.data.local.PlayerJournalEntity
 import com.example.dreambond.model.DialogueOption
 import com.example.dreambond.model.GirlfriendCharacter
 import com.example.dreambond.model.MinaMemory
 import com.example.dreambond.ui.ChatMessage
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -42,13 +49,20 @@ data class GameUiState(
     val sceneOptions: List<String> = emptyList(),
     val conversationTurns: Int = 0,
     val currentContextTag: String = "",
-    val currentContextTurns: Int = 0
+    val currentContextTurns: Int = 0,
+    val characterMemories: List<CharacterMemoryEntity> = emptyList(),
+    val playerJournalEntries: List<PlayerJournalEntity> = emptyList(),
+    val selectedJournalEntry: PlayerJournalEntity? = null
 )
 
 // Main ViewModel for DreamBond.
 // Responsible for core chat logic, relationship progression, profile questions, and saving progress.
 // Delegates dialogue generation to GameDialogueManager and date scenes to GameSceneHandlers.
-class GameViewModel(private val repository: GameRepository) : ViewModel() {
+class GameViewModel(
+    private val repository: GameRepository,
+    private val characterMemoryRepository: CharacterMemoryRepository,
+    private val playerJournalRepository: PlayerJournalRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -57,8 +71,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val dialogueManager = GameDialogueManager(_uiState)
     private val sceneHandlers = GameSceneHandlers(_uiState)
     private val conversationFlowManager = ConversationFlowManager(_uiState)
-    private val sessionFlowManager = GameSessionFlowManager(_uiState, sceneHandlers)
+    private val sessionFlowManager = GameSessionFlowManager(_uiState)
     private val backgroundContextDetector = ConversationContextDetector()
+    private var memoryJob: Job? = null
+    private var journalJob: Job? = null
 
     // Converts the user's selected reply into Mina's current mood.
     // This mood affects future dialogue and goodnight messages.
@@ -136,6 +152,65 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     isTyping = false,
                     messages = listOf(ChatMessage(text = character.introLine, isFromUser = false))
                 )
+            }
+            seedCharacterMemories(character.name)
+            observeCharacterMemories(character.name)
+            observeJournalEntriesForCharacter(character.name)
+        }
+    }
+
+    private suspend fun seedCharacterMemories(characterName: String) {
+        val existingMemories = characterMemoryRepository.getCharacterMemories(characterName).first()
+        if (existingMemories.isNotEmpty()) {
+            return
+        }
+
+        val seedMemories = listOf(
+            CharacterMemoryEntity(
+                characterName = characterName,
+                memoryType = "favorite_date",
+                content = "Your favorite date is still unknown.",
+                unlocked = false,
+                affectionRequired = 3
+            ),
+            CharacterMemoryEntity(
+                characterName = characterName,
+                memoryType = "favorite_food",
+                content = "Your favorite food is still unknown.",
+                unlocked = false,
+                affectionRequired = 3
+            ),
+            CharacterMemoryEntity(
+                characterName = characterName,
+                memoryType = "favorite_time",
+                content = "Your favorite time is still unknown.",
+                unlocked = false,
+                affectionRequired = 3
+            )
+        )
+        seedMemories.forEach { memory ->
+            characterMemoryRepository.insertMemory(memory)
+        }
+    }
+
+    private fun observeCharacterMemories(characterName: String) {
+        memoryJob?.cancel()
+        memoryJob = viewModelScope.launch {
+            characterMemoryRepository.getCharacterMemories(characterName).collect { memories ->
+                _uiState.update { current ->
+                    current.copy(characterMemories = memories)
+                }
+            }
+        }
+    }
+
+    private fun observeJournalEntriesForCharacter(characterName: String) {
+        journalJob?.cancel()
+        journalJob = viewModelScope.launch {
+            playerJournalRepository.getEntriesByCharacter(characterName).collect { entries ->
+                _uiState.update { current ->
+                    current.copy(playerJournalEntries = entries)
+                }
             }
         }
     }
@@ -245,8 +320,145 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun nextDay() {
         sessionFlowManager.nextDay(
             getMinaInitiatedLine = dialogueManager::getMinaInitiatedLine,
-            getMemoryRecallLine = dialogueManager::getMemoryRecallLine
+            getMemoryRecallLine = dialogueManager::getMemoryRecallLine,
+            askFavoriteDateQuestion = this::askFavoriteDateQuestion,
+            askFavoriteFoodQuestion = this::askFavoriteFoodQuestion,
+            askFavoriteTimeQuestion = this::askFavoriteTimeQuestion
         )
+    }
+
+    fun addJournalEntry(
+        title: String,
+        content: String,
+        mood: String,
+        tags: String = ""
+    ) {
+        val state = _uiState.value
+        val characterName = state.selectedCharacter?.name ?: return
+        val entry = PlayerJournalEntity(
+            title = title,
+            content = content,
+            characterName = characterName,
+            mood = mood,
+            date = System.currentTimeMillis(),
+            gameDay = state.day,
+            tags = tags
+        )
+        viewModelScope.launch {
+            playerJournalRepository.insertEntry(entry)
+        }
+    }
+
+    fun updateJournalEntry(entry: PlayerJournalEntity) {
+        viewModelScope.launch {
+            playerJournalRepository.updateEntry(entry)
+        }
+    }
+
+    fun deleteJournalEntry(entry: PlayerJournalEntity) {
+        viewModelScope.launch {
+            playerJournalRepository.deleteEntry(entry)
+        }
+    }
+
+    fun loadJournalEntryById(entryId: Int) {
+        viewModelScope.launch {
+            val entry = playerJournalRepository.getEntryById(entryId).first()
+            _uiState.update { current ->
+                current.copy(selectedJournalEntry = entry)
+            }
+        }
+    }
+
+    fun loadRecentJournalEntries() {
+        viewModelScope.launch {
+            val recentEntries = playerJournalRepository.getRecentEntries().first()
+            _uiState.update { current ->
+                current.copy(playerJournalEntries = recentEntries)
+            }
+        }
+    }
+
+    fun loadTodayJournalEntries() {
+        val gameDay = _uiState.value.day
+        viewModelScope.launch {
+            val entries = playerJournalRepository.getEntriesByGameDay(gameDay).first()
+            _uiState.update { current ->
+                current.copy(playerJournalEntries = entries)
+            }
+        }
+    }
+
+    fun loadAllJournalEntries() {
+        viewModelScope.launch {
+            val entries = playerJournalRepository.getAllEntries().first()
+            _uiState.update { current ->
+                current.copy(playerJournalEntries = entries)
+            }
+        }
+    }
+
+    fun loadMemoriesByType(memoryType: String) {
+        val characterName = _uiState.value.selectedCharacter?.name ?: return
+        viewModelScope.launch {
+            val memories = characterMemoryRepository.getMemoriesByType(characterName, memoryType).first()
+            _uiState.update { current ->
+                current.copy(characterMemories = memories)
+            }
+        }
+    }
+
+    fun loadUnlockedMemories() {
+        val characterName = _uiState.value.selectedCharacter?.name ?: return
+        viewModelScope.launch {
+            val memories = characterMemoryRepository.getUnlockedMemories(characterName).first()
+            _uiState.update { current ->
+                current.copy(characterMemories = memories)
+            }
+        }
+    }
+
+    fun deleteCharacterMemory(memory: CharacterMemoryEntity) {
+        viewModelScope.launch {
+            characterMemoryRepository.deleteMemory(memory)
+        }
+    }
+
+    private fun saveOrUnlockMemory(memoryType: String, content: String) {
+        val state = _uiState.value
+        val characterName = state.selectedCharacter?.name ?: return
+        val now = System.currentTimeMillis()
+        viewModelScope.launch {
+            val existing = characterMemoryRepository
+                .getMemoriesByType(characterName, memoryType)
+                .first()
+                .firstOrNull()
+
+            if (existing == null) {
+                characterMemoryRepository.insertMemory(
+                    CharacterMemoryEntity(
+                        characterName = characterName,
+                        memoryType = memoryType,
+                        content = content,
+                        unlocked = true,
+                        unlockedDate = now,
+                        affectionRequired = 0
+                    )
+                )
+                return@launch
+            }
+
+            characterMemoryRepository.updateMemory(
+                existing.copy(
+                    content = content,
+                    unlocked = true,
+                    unlockedDate = now
+                )
+            )
+            if (!existing.unlocked) {
+                characterMemoryRepository.unlockMemory(existing.id, now)
+            }
+        }
     }
 
     // Saves only basic progress to Room.
@@ -346,6 +558,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun selectFavoriteDate(date: String) {
         sessionFlowManager.selectFavoriteDate(date)
+        saveOrUnlockMemory(
+            memoryType = "favorite_date",
+            content = date
+        )
     }
 
     fun askFavoriteFoodQuestion(intro: String? = null) {
@@ -353,7 +569,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteFood(food: String) {
-        sessionFlowManager.selectFavoriteFood(food)
+        sessionFlowManager.selectFavoriteFood(
+            food = food,
+            startBingsuDateScene = this::startBingsuDateScene,
+            startCafeDateScene = this::startCafeDateScene,
+            startTeaHouseDateScene = this::startTeaHouseDateScene
+        )
+        saveOrUnlockMemory(
+            memoryType = "favorite_food",
+            content = food
+        )
     }
 
     fun askFavoriteTimeQuestion(intro: String? = null) {
@@ -361,7 +586,14 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun selectFavoriteTime(time: String) {
-        sessionFlowManager.selectFavoriteTime(time)
+        sessionFlowManager.selectFavoriteTime(
+            time = time,
+            startBookstoreDateScene = this::startBookstoreDateScene
+        )
+        saveOrUnlockMemory(
+            memoryType = "favorite_time",
+            content = time
+        )
     }
 
     // Starts the Bingsu Date scene.

@@ -79,6 +79,8 @@ fun ChatScreen(
     onSelectFavoriteFood: (String) -> Unit,
     onSelectFavoriteTime: (String) -> Unit,
     onChooseSceneOption: (String) -> Unit,
+    onOpenJournal: () -> Unit,
+    onOpenMemories: () -> Unit,
     onContinueAfterReply: () -> Unit,
     onEndDay: () -> Unit,
     onSpeakLatestResponse: (String) -> Unit
@@ -225,6 +227,34 @@ fun ChatScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFB8C1EC)
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onOpenJournal,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0x883B4A7A),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("Journal")
+                    }
+                    Button(
+                        onClick = onOpenMemories,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0x885B3F72),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("Memories")
+                    }
+                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
