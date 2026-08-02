@@ -86,4 +86,14 @@ Characters remember:
 
 ## 📷 Screenshots
 
-Screenshots coming soon.
+### Welcome and Character Selection
+
+<p align="center">
+  <img src="./screenshots/welcome.png" width="240" alt="DreamBond welcome screen">
+  <img src="./screenshots/character_selection.png" width="240" alt="Character selection screen">
+</p>
+
+<p align="center">
+  <img src="./screenshots/mina_conversation.png" width="240" alt="Mina conversation screen">
+  <img src="./screenshots/alice_conversation.png" width="240" alt="Alice conversation screen">
+</p>
