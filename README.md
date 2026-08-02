@@ -86,16 +86,26 @@ Characters remember:
 
 ## 📷 Screenshots
 
+## 📷 Screenshots
+
 ### Welcome and Character Selection
 
 <p align="center">
-  <img src="./screenshots/welcome.png" width="240">
-  <img src="./screenshots/character_selection.png" width="240">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/welcome.png"
+       width="240"
+       alt="DreamBond welcome screen">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/character_selection.png"
+       width="240"
+       alt="Character selection screen">
 </p>
 
 ### Companion Experiences
 
 <p align="center">
-  <img src="./screenshots/mina_conversation.png" width="240">
-  <img src="./screenshots/alice_conversation.png" width="240">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/mina_conversation.png"
+       width="240"
+       alt="Mina conversation screen">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/alice_conversation.png"
+       width="240"
+       alt="Alice conversation screen">
 </p>
