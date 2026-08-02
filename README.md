@@ -88,16 +88,12 @@ Characters remember:
 
 ## 📷 Screenshots
 
-### Welcome and Character Selection
-
-## 📷 Screenshots
-
 <p align="center">
-  <img src="./app/src/main/java/com/example/dreambond/screenshots/welcome.png" width="220" alt="Welcome">
-  <img src="./app/src/main/java/com/example/dreambond/screenshots/character_selection.png" width="220" alt="Character Selection">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/welcome.png" width="180" alt="Welcome">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/character_selection.png" width="180" alt="Character Selection">
 </p>
 
 <p align="center">
-  <img src="./app/src/main/java/com/example/dreambond/screenshots/mina_conversation.png" width="220" alt="Mina Conversation">
-  <img src="./app/src/main/java/com/example/dreambond/screenshots/alice_conversation.png" width="220" alt="Alice Conversation">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/mina_conversation.png" width="180" alt="Mina Conversation">
+  <img src="./app/src/main/java/com/example/dreambond/screenshots/alice_conversation.png" width="180" alt="Alice Conversation">
 </p>
