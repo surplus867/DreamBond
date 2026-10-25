@@ -1,12 +1,14 @@
 package com.example.dreambond.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.dreambond.GameViewModel
 import com.example.dreambond.GameViewModelFactory
 import com.example.dreambond.audio.MinaVoiceManager
@@ -37,6 +39,13 @@ fun AppNavGraph(
     )
     val gameViewModel: GameViewModel = viewModel(factory = factory)
     val uiState by gameViewModel.uiState.collectAsState()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == Screen.CharacterSelect.route) {
+            musicManager.pause()
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -46,8 +55,6 @@ fun AppNavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 onStartClick = {
-                    // Start background music when user begins the flow.
-                    musicManager.play()
                     navController.navigate(Screen.CharacterSelect.route)
                 }
             )
@@ -59,11 +66,6 @@ fun AppNavGraph(
                 characters = gameViewModel.characters,
                 onCharacterSelected = { character ->
                     musicManager.setThemeForCharacter(character.name)
-                    if (isMusicEnabled && musicManager.isStarted) {
-                        musicManager.play()
-                    } else {
-                        musicManager.pause()
-                    }
                     gameViewModel.selectCharacter(character)
                     navController.navigate(Screen.Chat.route)
                 }
@@ -72,6 +74,14 @@ fun AppNavGraph(
 
         // Chat: main gameplay loop with dialogue choices and session progression.
          composable(Screen.Chat.route) {
+             LaunchedEffect(isMusicEnabled) {
+                 if (isMusicEnabled) {
+                     musicManager.play()
+                 } else {
+                     musicManager.pause()
+                 }
+             }
+
              ChatScreen(
                  character = uiState.selectedCharacter,
                  affection = uiState.affection,

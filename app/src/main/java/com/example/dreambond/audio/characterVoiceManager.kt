@@ -1,5 +1,6 @@
 package com.example.dreambond.audio
 
+import android.R.attr.mode
 import android.content.Context
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -38,6 +39,21 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, softVolume)
         }
         tts?.stop()
+        if (characterName == "Clara" && cleanText.contains("...")) {
+            tts?.setSpeechRate(0.80f)
+            // Drop pieces like a lone "?" so the engine never reads punctuation aloud.
+            val parts = cleanText.split("...")
+                .map { it.trim().trimStart('?', '!', '.', ',') }
+                .filter { part -> part.any { it.isLetterOrDigit() } }
+            parts.forEachIndexed { i, part ->
+                val mode = if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+                tts?.speak(part, mode, params, "character_voice_$i")
+                if (i < parts.lastIndex) {
+                    tts?.playSilentUtterance(300, TextToSpeech.QUEUE_ADD, "pause_$i")
+                }
+            }
+            return
+        }
         tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, params, "character_voice")
     }
 
@@ -61,12 +77,13 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
                 selectBestEnglishVoice(engine, Locale.CANADA)
                     ?: selectBestEnglishVoice(engine, Locale.US)
                     ?: selectBestEnglishVoice(engine, Locale.ENGLISH)
-                ?.let { bestVoice ->
-                    engine.voice = bestVoice
-                }
+                        ?.let { bestVoice ->
+                            engine.voice = bestVoice
+                        }
                 engine.setSpeechRate(0.86f)
                 engine.setPitch(1.08f)
             }
+
             else -> {
                 // Mina: prefer natural US English to avoid accented fallback voices
                 val localeResult = engine.setLanguage(Locale.US)
@@ -78,9 +95,9 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
                 selectBestEnglishVoice(engine, Locale.US)
                     ?: selectBestEnglishVoice(engine, Locale.ENGLISH)
                     ?: selectBestEnglishVoice(engine, Locale.CANADA)
-                ?.let { bestVoice ->
-                    engine.voice = bestVoice
-                }
+                        ?.let { bestVoice ->
+                            engine.voice = bestVoice
+                        }
                 engine.setSpeechRate(0.92f)
                 engine.setPitch(1.0f)
             }
