@@ -52,7 +52,8 @@ data class GameUiState(
     val currentContextTurns: Int = 0,
     val characterMemories: List<CharacterMemoryEntity> = emptyList(),
     val playerJournalEntries: List<PlayerJournalEntity> = emptyList(),
-    val selectedJournalEntry: PlayerJournalEntity? = null
+    val selectedJournalEntry: PlayerJournalEntity? = null,
+    val lastGiftDay: Int = 0
 )
 
 // Main ViewModel for DreamBond.
@@ -314,6 +315,45 @@ class GameViewModel(
                     messages = current.messages + replyMessages
                 )
             }
+        }
+    }
+
+    // One gift per in-game day. Each gift raises affection and sets a happy mood.
+    fun giveGift(gift: String) {
+        val current = _uiState.value
+        if (current.isTyping || current.lastGiftDay == current.day) return
+
+        val isClara = current.selectedCharacter?.name == "Clara"
+        val (points, reply) = when (gift) {
+            "Flowers" -> 2 to if (isClara) {
+                "Oh... flowers? For me... thank you. They're so pretty."
+            } else {
+                "Flowers! You remembered I like them. Thank you!"
+            }
+            "Chocolate" -> 1 to if (isClara) {
+                "Chocolate... I really like this. That's very sweet of you."
+            } else {
+                "Chocolate? Yum! I'm not sharing, you know."
+            }
+            else -> 3 to if (isClara) {
+                "A teddy bear... I... I love it. I'll keep it close."
+            } else {
+                "A teddy bear?! This is so cute. You're the best!"
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                affection = it.affection + points,
+                mood = "Happy",
+                moodIntensity = 3,
+                lastGiftDay = it.day,
+                currentMessage = reply,
+                latestResponse = reply,
+                messages = it.messages +
+                    ChatMessage(text = "🎁 You gave $gift.", isFromUser = true) +
+                    ChatMessage(text = reply, isFromUser = false)
+            )
         }
     }
 

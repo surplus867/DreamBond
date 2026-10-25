@@ -83,6 +83,8 @@ fun ChatScreen(
     sceneBackgroundRes: Int,
     isMusicEnabled: Boolean,
     isSpeaking: Boolean,
+    canGiveGift: Boolean,
+    onGiveGift: (String) -> Unit,
     onToggleMusic: () -> Unit,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
@@ -541,6 +543,26 @@ fun ChatScreen(
                             }
 
                             else -> {
+                                if (canGiveGift) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        listOf("Flowers" to "🌸", "Chocolate" to "🍫", "Teddy" to "🧸").forEach { (gift, icon) ->
+                                            Button(
+                                                onClick = { onGiveGift(gift) },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0x88B5547A),
+                                                    contentColor = Color.White
+                                                )
+                                            ) {
+                                                Text("$icon $gift", maxLines = 1)
+                                            }
+                                        }
+                                    }
+                                }
                                 options.forEach { option ->
                                     Button(
                                         onClick = { onChooseReply(option) },
