@@ -56,7 +56,7 @@ class GameSceneHandlers(private val uiStateFlow: MutableStateFlow<GameUiState>) 
     }
 
     /**
-     * Starts the Tea House Date scene for Alice (2-step: acceptance -> tea selection).
+     * Starts the Tea House Date scene for Clara (2-step: acceptance -> tea selection).
      */
     fun startTeaHouseDateScene() {
         uiStateFlow.update { current ->
@@ -77,7 +77,7 @@ class GameSceneHandlers(private val uiStateFlow: MutableStateFlow<GameUiState>) 
     }
 
     /**
-     * Starts the Bookstore Date scene for Alice (2-step: acceptance -> genre selection).
+     * Starts the Bookstore Date scene for Clara (2-step: acceptance -> genre selection).
      */
     fun startBookstoreDateScene() {
         uiStateFlow.update { current ->
@@ -254,7 +254,7 @@ class GameSceneHandlers(private val uiStateFlow: MutableStateFlow<GameUiState>) 
     }
 
     /**
-     * Handles Tea House Date as a 2-step scene for Alice:
+     * Handles Tea House Date as a 2-step scene for Clara:
      * Step 1: Accept invitation
      * Step 2: Choose tea type
      */
@@ -332,7 +332,7 @@ class GameSceneHandlers(private val uiStateFlow: MutableStateFlow<GameUiState>) 
     }
 
     /**
-     * Handles Bookstore Date as a 2-step scene for Alice:
+     * Handles Bookstore Date as a 2-step scene for Clara:
      * Step 1: Accept invitation
      * Step 2: Choose reading genre/activity
      */

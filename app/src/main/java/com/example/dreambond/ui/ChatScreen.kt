@@ -123,7 +123,7 @@ fun ChatScreen(
             else -> R.drawable.mina_special
         }
 
-        "Alice" -> when (relationshipLevel) {
+        "Clara" -> when (relationshipLevel) {
             "Stranger" -> R.drawable.alice_stranger
             "Friend" -> R.drawable.alice_friend
             "Close" -> R.drawable.alice_close
@@ -294,7 +294,7 @@ fun ChatScreen(
                 sceneBackgroundRes != R.drawable.bg_default_night || activeScene.isNotBlank()
             val portraitHeight = if (isSceneFocusedBackground) 280.dp else 360.dp
             val portraitWidthFraction = if (isSceneFocusedBackground) 0.72f else 0.82f
-            val portraitAlpha = if (character?.name == "Alice") 0.78f else 0.9f
+            val portraitAlpha = if (character?.name == "Clara") 0.78f else 0.9f
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

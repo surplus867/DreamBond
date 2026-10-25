@@ -104,7 +104,7 @@ class GameViewModel(
 
         GirlfriendCharacter(
             id = 2,
-            name = "Alice",
+            name = "Clara",
             personality = "Shy and traditional",
             introLine = "Oh... you came. I was not sure if you would."
         )
@@ -608,13 +608,13 @@ class GameViewModel(
         sceneHandlers.startCafeDateScene()
     }
 
-    // Starts the Tea House Date scene for Alice (2-step).
+    // Starts the Tea House Date scene for Clara (2-step).
 // Delegates to GameSceneHandlers.
     fun startTeaHouseDateScene() {
         sceneHandlers.startTeaHouseDateScene()
     }
 
-    // Starts the Bookstore Date scene for Alice (2-step).
+    // Starts the Bookstore Date scene for Clara (2-step).
 // Delegates to GameSceneHandlers.
     fun startBookstoreDateScene() {
         sceneHandlers.startBookstoreDateScene()

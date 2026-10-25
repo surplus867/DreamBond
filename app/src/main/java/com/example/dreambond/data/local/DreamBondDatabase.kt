@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [GameProgressEntity::class, CharacterMemoryEntity::class, PlayerJournalEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class DreamBondDatabase : RoomDatabase() {

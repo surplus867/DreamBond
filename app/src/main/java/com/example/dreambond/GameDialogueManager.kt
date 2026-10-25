@@ -108,7 +108,7 @@ class GameDialogueManager(private val uiStateFlow: MutableStateFlow<GameUiState>
         val personality = getPersonalityType()
         val moodIntensity = state.moodIntensity
 
-        if (characterName == "Alice") {
+        if (characterName == "Clara") {
             return when {
                 memory.favoriteFood.contains("Coffee", ignoreCase = true) ->
                     "I remembered you like coffee... I thought that was very you."

@@ -22,7 +22,7 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
     }
 
     // Updated speak() method to accept optional character name
-    // If character is "Alice", applies English/Canadian voice settings
+    // If character is Clara, applies English/Canadian voice settings
     // Otherwise uses default Mina Korean voice settings
     fun speak(characterName: String?, text: String) {
         if (!isReady || text.isBlank()) return
@@ -50,8 +50,8 @@ class MinaVoiceManager(context: Context) : TextToSpeech.OnInitListener {
         val engine = tts ?: return
 
         when (characterName) {
-            "Alice" -> {
-                // Alice: English (Canadian)
+            "Clara" -> {
+                // Clara: English (Canadian)
                 val localeResult = engine.setLanguage(Locale.CANADA)
                 if (localeResult == TextToSpeech.LANG_MISSING_DATA ||
                     localeResult == TextToSpeech.LANG_NOT_SUPPORTED

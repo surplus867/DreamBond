@@ -13,7 +13,7 @@ Unlike a traditional chatbot, DreamBond focuses on emotional progression, charac
 ### 👥 Multiple Companions
 
 * Mina 🌙 — calm, caring, and emotionally warm
-* Alice 🍵 — shy, traditional, and soft-spoken
+* Clara 🍵 — shy, traditional, and soft-spoken
 
 ### 💬 Interactive Dialogue System
 
@@ -95,5 +95,5 @@ Characters remember:
 
 <p align="center">
   <img src="./screenshots/mina_conversation.png" width="240" alt="Mina conversation screen">
-  <img src="./screenshots/alice_conversation.png" width="240" alt="Alice conversation screen">
+  <img src="./screenshots/alice_conversation.png" width="240" alt="Clara conversation screen">
 </p>

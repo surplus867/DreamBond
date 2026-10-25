@@ -20,10 +20,10 @@ class MusicManager(context: Context) {
     }
 
     // Switches BGM based on selected character.
-    // Alice uses alice_theme, Mina/default uses mina_theme.
+    // Clara uses the former Alice theme, Mina/default uses mina_theme.
     fun setThemeForCharacter(characterName: String?) {
         val nextThemeResId = when (characterName) {
-            "Alice" -> R.raw.alice_theme
+            "Clara" -> R.raw.alice_theme
             else -> R.raw.mina_theme
         }
 

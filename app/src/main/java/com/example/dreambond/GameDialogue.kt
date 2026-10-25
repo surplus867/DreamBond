@@ -13,8 +13,8 @@ fun generateDynamicReply(state: GameUiState, option: DialogueOption): String {
     val lastChoice = state.memory.lastChoice
     val favoriteDate = state.memory.favoriteDate
 
-    // Alice character branch
-    if (characterName == "Alice") {
+    // Clara character branch
+    if (characterName == "Clara") {
         return when (option.text) {
             "I wanted to see you." ->
                 "You say things like that so easily... it makes me shy."
@@ -205,8 +205,8 @@ fun generateMemoryRecallLine(state: GameUiState, personality: String): String? {
     val characterName = state.selectedCharacter?.name
     val moodIntensity = state.moodIntensity
 
-    // Alice character memory recall
-    if (characterName == "Alice") {
+    // Clara character memory recall
+    if (characterName == "Clara") {
         return when {
             memory.lastDateScene == "Tea House Date 🍵" ->
                 "I remembered the tea house... it felt quiet and gentle."
@@ -326,4 +326,3 @@ fun generateMinaInitiatedLine(state: GameUiState, personality: String): String? 
         else -> null
     }
 }
-

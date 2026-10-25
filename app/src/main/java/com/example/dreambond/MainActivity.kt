@@ -12,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.dreambond.audio.MinaVoiceManager
 import com.example.dreambond.audio.MusicManager
 import com.example.dreambond.data.local.DreamBondDatabase
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
             DreamBondDatabase::class.java,
             "dreambond_database"
         )
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration(false)
             .build()
 
@@ -86,5 +89,14 @@ class MainActivity : ComponentActivity() {
         minaVoiceManager.shutdown()
         musicManager.release()
         super.onDestroy()
+    }
+
+    private companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE character_memories SET characterName = 'Clara' WHERE characterName = 'Alice'")
+                db.execSQL("UPDATE player_journal SET characterName = 'Clara' WHERE characterName = 'Alice'")
+            }
+        }
     }
 }
