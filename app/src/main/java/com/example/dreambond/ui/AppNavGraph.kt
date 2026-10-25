@@ -113,6 +113,7 @@ fun AppNavGraph(
                  ),
                  // Forward music toggle state so ChatScreen can control playback.
                  isMusicEnabled = isMusicEnabled,
+                 isSpeaking = minaVoiceManager.isSpeaking,
                  onToggleMusic = onToggleMusic,
                  onChooseReply = { option ->
                      gameViewModel.chooseReply(option)

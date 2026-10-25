@@ -1,6 +1,13 @@
 package com.example.dreambond.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
@@ -37,8 +44,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -73,6 +82,7 @@ fun ChatScreen(
     sceneOptions: List<String>,
     sceneBackgroundRes: Int,
     isMusicEnabled: Boolean,
+    isSpeaking: Boolean,
     onToggleMusic: () -> Unit,
     onChooseReply: (DialogueOption) -> Unit,
     onSelectFavoriteDate: (String) -> Unit,
@@ -133,6 +143,48 @@ fun ChatScreen(
         else -> R.drawable.mina_special
     }
 
+    val portraitAlpha = if (character?.name == "Clara") 0.78f else 0.9f
+    val isClara = character?.name == "Clara"
+    val idle = rememberInfiniteTransition(label = "portraitIdle")
+    val breathe by idle.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.02f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (isClara) 3200 else 2600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathe"
+    )
+    val floatY by idle.animateFloat(
+        initialValue = 0f,
+        targetValue = -6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (isClara) 3600 else 2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "floatY"
+    )
+    // Quick pulse that only shows while the character is talking.
+    val talkPulse by idle.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (isClara) 420 else 340, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "talkPulse"
+    )
+    val talkAmount by animateFloatAsState(
+        targetValue = if (isSpeaking) 1f else 0f,
+        animationSpec = tween(300),
+        label = "talkAmount"
+    )
+    val speakZoom by animateFloatAsState(
+        targetValue = if (isSpeaking) 1.08f else 1f,
+        animationSpec = tween(700, easing = FastOutSlowInEasing),
+        label = "speakZoom"
+    )
+
     val shouldShowMessageContainer =
         !sessionEnded && (visibleMessages.isNotEmpty() || visibleCurrentMessage.isNotEmpty() || isTyping)
 
@@ -185,333 +237,328 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            
-            Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+
+            Image(
+                painter = painterResource(id = portraitRes),
+                contentDescription = character?.name ?: "Character portrait",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val scale = (breathe + talkAmount * 0.015f * talkPulse) * speakZoom
+                        scaleX = scale
+                        scaleY = scale
+                        translationY = (floatY - talkAmount * 6f * talkPulse) * density
+                    }
+                    .alpha(portraitAlpha),
+                alignment = Alignment.TopCenter,
+                contentScale = ContentScale.Crop
+            )
+
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = character?.name ?: "Mina",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White
-                    )
-
-                    Button(
-                        onClick = onToggleMusic,
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF202845),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(if (isMusicEnabled) "🎵 On" else "🔇 Off")
-                    }
-                }
-
-                Text(
-                    text = "A quiet night with ${character?.name ?: "her"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFB8C1EC)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onOpenJournal,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0x883B4A7A),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text("Journal")
-                    }
-                    Button(
-                        onClick = onOpenMemories,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0x885B3F72),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text("Memories")
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x88202845))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Affection: $affection ❤️", color = Color.White)
-                            Text(relationshipLevel, color = statusColor)
-                        }
-
-                        Text("Mood: $mood", color = Color(0xFFB8C1EC))
-
-                        HorizontalDivider(color = Color(0xFF3A4267))
-
-                        Text(
-                            text = "${character?.name ?: "Mina"} adapts to you: $personalityType",
-                            color = Color(0xFFB8C1EC)
-                        )
-
-                        Text(
-                            text = getMoodText(relationshipLevel),
-                            color = Color(0xFFB8C1EC)
-                        )
-                    }
-                }
-            }
-
-            val isSceneFocusedBackground =
-                sceneBackgroundRes != R.drawable.bg_default_night || activeScene.isNotBlank()
-            val portraitHeight = if (isSceneFocusedBackground) 280.dp else 360.dp
-            val portraitWidthFraction = if (isSceneFocusedBackground) 0.72f else 0.82f
-            val portraitAlpha = if (character?.name == "Clara") 0.78f else 0.9f
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(portraitWidthFraction),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                ) {
-                    Image(
-                        painter = painterResource(id = portraitRes),
-                        contentDescription = character?.name ?: "Character portrait",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(portraitHeight)
-                            .alpha(portraitAlpha),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            val headlineLine = latestResponse.ifBlank { currentMessage }
-            if (headlineLine.isNotBlank() && visibleMessages.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xCC1C2340)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = character?.name ?: "Mina",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFFFFD6E7)
-                        )
-
-                        Text(
-                            text = headlineLine,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            if (shouldShowMessageContainer) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 240.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x882A3358))
-                ) {
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (visibleMessages.isNotEmpty()) {
-                            items(visibleMessages) { message ->
-                                ChatBubble(
-                                    message = message,
-                                    characterName = character?.name ?: "Mina"
-                                )
-                            }
-                        } else if (visibleCurrentMessage.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = character?.name ?: "Mina",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = Color(0xFFFFD6E7)
-                                )
-                            }
-
-                            item {
-                                Text(
-                                    text = displayText,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White
-                                )
-                            }
-                        }
-
-                        if (isTyping) {
-                            item {
-                                AnimatedVisibility(
-                                    visible = true,
-                                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
-                                ) {
-                                    TypingIndicator(name = character?.name ?: "Mina")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            val latestAlreadyInMessages = visibleMessages.any { !it.isFromUser && it.text == latestResponse }
-            if (latestResponse.isNotBlank() && sessionEnded && !latestAlreadyInMessages) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x883A4267))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Her tone tonight",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFFB8C1EC)
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = latestResponse,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            if (!isTyping && !sessionEnded) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    when {
-                        activeScene.isNotBlank() -> {
-                            sceneOptions.forEach { choice ->
-                                Button(
-                                    onClick = { onChooseSceneOption(choice) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0x885561A8),
-                                        contentColor = Color.White
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = character?.name ?: "Mina",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+
+                        Button(
+                            onClick = onToggleMusic,
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF202845),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(if (isMusicEnabled) "🎵 On" else "🔇 Off")
+                        }
+                    }
+
+                    Text(
+                        text = "A quiet night with ${character?.name ?: "her"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFB8C1EC)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onOpenJournal,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0x883B4A7A),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Journal")
+                        }
+                        Button(
+                            onClick = onOpenMemories,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0x885B3F72),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Memories")
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0x88202845))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Affection: $affection ❤️", color = Color.White)
+                                Text(relationshipLevel, color = statusColor)
+                            }
+
+                            Text("Mood: $mood", color = Color(0xFFB8C1EC))
+
+                            HorizontalDivider(color = Color(0xFF3A4267))
+
+                            Text(
+                                text = "${character?.name ?: "Mina"} adapts to you: $personalityType",
+                                color = Color(0xFFB8C1EC)
+                            )
+
+                            Text(
+                                text = getMoodText(relationshipLevel),
+                                color = Color(0xFFB8C1EC)
+                            )
+                        }
+                    }
+                }
+
+                val isSceneFocusedBackground =
+                    sceneBackgroundRes != R.drawable.bg_default_night || activeScene.isNotBlank()
+
+                // The full-screen portrait sits behind this column; leave room so text starts below her face.
+                Spacer(modifier = Modifier.height(if (isSceneFocusedBackground) 160.dp else 240.dp))
+                val headlineLine = latestResponse.ifBlank { currentMessage }
+                if (headlineLine.isNotBlank() && visibleMessages.isEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xCC1C2340)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = character?.name ?: "Mina",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color(0xFFFFD6E7)
+                            )
+
+                            Text(
+                                text = headlineLine,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                if (shouldShowMessageContainer) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp, max = 240.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0x882A3358))
+                    ) {
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (visibleMessages.isNotEmpty()) {
+                                items(visibleMessages) { message ->
+                                    ChatBubble(
+                                        message = message,
+                                        characterName = character?.name ?: "Mina"
                                     )
-                                ) {
-                                    Text(choice)
+                                }
+                            } else if (visibleCurrentMessage.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = character?.name ?: "Mina",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color(0xFFFFD6E7)
+                                    )
+                                }
+
+                                item {
+                                    Text(
+                                        text = displayText,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+
+                            if (isTyping) {
+                                item {
+                                    AnimatedVisibility(
+                                        visible = true,
+                                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
+                                    ) {
+                                        TypingIndicator(name = character?.name ?: "Mina")
+                                    }
                                 }
                             }
                         }
+                    }
+                }
 
-                        showDateQuestion -> {
-                            dateOptions.forEach { date ->
-                                Button(
-                                    onClick = { onSelectFavoriteDate(date) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0x887B5EA7),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Text(date)
+                val latestAlreadyInMessages =
+                    visibleMessages.any { !it.isFromUser && it.text == latestResponse }
+                if (latestResponse.isNotBlank() && sessionEnded && !latestAlreadyInMessages) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0x883A4267))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Her tone tonight",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFFB8C1EC)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = latestResponse,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                if (!isTyping && !sessionEnded) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        when {
+                            activeScene.isNotBlank() -> {
+                                sceneOptions.forEach { choice ->
+                                    Button(
+                                        onClick = { onChooseSceneOption(choice) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0x885561A8),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text(choice)
+                                    }
                                 }
                             }
-                        }
 
-                        showFoodQuestion -> {
-                            foodOptions.forEach { food ->
-                                Button(
-                                    onClick = { onSelectFavoriteFood(food) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0x888D6E63),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Text(food)
+                            showDateQuestion -> {
+                                dateOptions.forEach { date ->
+                                    Button(
+                                        onClick = { onSelectFavoriteDate(date) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0x887B5EA7),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text(date)
+                                    }
                                 }
                             }
-                        }
 
-                        showTimeQuestion -> {
-                            timeOptions.forEach { time ->
-                                Button(
-                                    onClick = { onSelectFavoriteTime(time) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0x8837474F),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Text(time)
+                            showFoodQuestion -> {
+                                foodOptions.forEach { food ->
+                                    Button(
+                                        onClick = { onSelectFavoriteFood(food) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0x888D6E63),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text(food)
+                                    }
                                 }
                             }
-                        }
 
-                        else -> {
-                            options.forEach { option ->
-                                Button(
-                                    onClick = { onChooseReply(option) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0x885561A8),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Text(option.text)
+                            showTimeQuestion -> {
+                                timeOptions.forEach { time ->
+                                    Button(
+                                        onClick = { onSelectFavoriteTime(time) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0x8837474F),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text(time)
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                options.forEach { option ->
+                                    Button(
+                                        onClick = { onChooseReply(option) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0x885561A8),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text(option.text)
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
         }
     }
 }
